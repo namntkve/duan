@@ -464,8 +464,8 @@
       const now=new Date(); 
       const y=now.getFullYear().toString().slice(-2); 
       const w=pad(getWeekNumber(now),2); 
-      const used=contracts.filter(c=>(c.contract_id||'').startsWith(`HD_${y}${w}`)).map(c=>parseInt(c.contract_id.slice(7),10)).filter(Number.isFinite); 
-      for(let i=1;i<=99;i++) if(!used.includes(i)) return `HD_${y}${w}${pad(i,2)}`; 
+      const used=contracts.filter(c=>(c.contract_id||'').startsWith(HD_${y}${w})).map(c=>parseInt(c.contract_id.slice(7),10)).filter(Number.isFinite); 
+      for(let i=1;i<=99;i++) if(!used.includes(i)) return HD_${y}${w}${pad(i,2)}; 
       throw new Error('Hết mã hợp đồng'); 
     }
 
@@ -477,7 +477,7 @@
 
     function showSection(page){ 
       document.querySelectorAll('[id^="page-"]').forEach(el=>el.classList.add('d-none')); 
-      document.getElementById(`page-${page}`).classList.remove('d-none'); 
+      document.getElementById(page-${page}).classList.remove('d-none'); 
       document.querySelectorAll('.sidebar .nav-link').forEach(a=>{ 
         if(a.dataset.page===page) a.classList.add('active'); 
         else a.classList.remove('active'); 
@@ -532,7 +532,7 @@
         const statusClass = task.status === 'pending' ? 'status-pending' : 
                            task.status === 'in_progress' ? 'status-in-progress' : 'status-completed';
         
-        return `
+        return 
           <tr>
             <td>${task.task_name}</td>
             <td>${project ? project.project_name : 'N/A'}</td>
@@ -544,7 +544,7 @@
               </div>
             </td>
           </tr>
-        `;
+        ;
       }).join('');
     }
 
@@ -560,7 +560,7 @@
         const pendingTasks = projectTasks.filter(t => t.status === 'pending').length;
         const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
         
-        return `
+        return 
           <tr>
             <td>${project.project_name}</td>
             <td>${client ? client.name : 'N/A'}</td>
@@ -575,7 +575,7 @@
             </td>
             <td><span class="status-badge ${project.status === 'active' ? 'status-in-progress' : project.status === 'completed' ? 'status-completed' : 'status-pending'}">${project.status}</span></td>
           </tr>
-        `;
+        ;
       }).join('');
     }
 
@@ -695,7 +695,7 @@ if (lastError) console.error('Supabase error:', lastError);
     /* 4) RENDER FUNCTIONS */
     function renderUsers() {
       const tbody = document.getElementById('userTbody');
-      tbody.innerHTML = users.map(user => `
+      tbody.innerHTML = users.map(user => 
         <tr>
           <td>${user.email}</td>
           <td>${user.role}</td>
@@ -705,14 +705,14 @@ if (lastError) console.error('Supabase error:', lastError);
             <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user.email}')">Delete</button>
           </td>
         </tr>
-      `).join('');
+      ).join('');
     }
 
     function renderProjects() {
       const tbody = document.getElementById('projectTbody');
       tbody.innerHTML = projects.map(project => {
         const client = clients.find(c => c.id === project.customer_id);
-        return `
+        return 
           <tr>
             <td>${project.project_id}</td>
             <td>${project.project_name}</td>
@@ -725,13 +725,13 @@ if (lastError) console.error('Supabase error:', lastError);
               <button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${project.project_id}')">Delete</button>
             </td>
           </tr>
-        `;
+        ;
       }).join('');
     }
 
     function renderClients() {
       const tbody = document.getElementById('clientTbody');
-      tbody.innerHTML = clients.map(client => `
+      tbody.innerHTML = clients.map(client => 
         <tr>
           <td>${client.id}</td>
           <td>${client.name}</td>
@@ -744,7 +744,7 @@ if (lastError) console.error('Supabase error:', lastError);
             <button class="btn btn-sm btn-outline-danger" onclick="deleteClient('${client.id}')">Delete</button>
           </td>
         </tr>
-      `).join('');
+      ).join('');
     }
 
     function renderContracts() {
@@ -752,7 +752,7 @@ if (lastError) console.error('Supabase error:', lastError);
       tbody.innerHTML = contracts.map(contract => {
         const project = projects.find(p => p.project_id === contract.project_id);
         const client = clients.find(c => c.id === contract.customer_id);
-        return `
+        return 
           <tr>
             <td>${contract.contract_id}</td>
             <td>${project ? project.project_name : 'N/A'}</td>
@@ -764,7 +764,7 @@ if (lastError) console.error('Supabase error:', lastError);
               <button class="btn btn-sm btn-outline-danger" onclick="deleteContract('${contract.contract_id}')">Delete</button>
             </td>
           </tr>
-        `;
+        ;
       }).join('');
     }
 
@@ -774,7 +774,7 @@ if (lastError) console.error('Supabase error:', lastError);
         const project = projects.find(p => p.project_id === task.project_id);
         const statusClass = task.status === 'pending' ? 'status-pending' : 
                            task.status === 'in_progress' ? 'status-in-progress' : 'status-completed';
-        return `
+        return 
           <tr>
             <td>${task.task_id}</td>
             <td>${task.task_name}</td>
@@ -789,13 +789,13 @@ if (lastError) console.error('Supabase error:', lastError);
               <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${task.task_id}')">Delete</button>
             </td>
           </tr>
-        `;
+        ;
       }).join('');
     }
 
     function renderWeeklyReports() {
       const tbody = document.getElementById('weeklyReportTbody');
-      tbody.innerHTML = weeklyReports.map(report => `
+      tbody.innerHTML = weeklyReports.map(report => 
         <tr>
           <td>${report.week_year}</td>
           <td>${report.user_email}</td>
@@ -808,13 +808,13 @@ if (lastError) console.error('Supabase error:', lastError);
             <button class="btn btn-sm btn-outline-danger" onclick="deleteWeeklyReport('${report.id}')">Delete</button>
           </td>
         </tr>
-      `).join('');
+      ).join('');
     }
 
     /* 5) FORM FUNCTIONS */
     function showUserForm(user = null) {
       const isEdit = !!user;
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} User</h5>
@@ -846,7 +846,7 @@ if (lastError) console.error('Supabase error:', lastError);
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('userFormWrap').innerHTML = formHtml;
       document.getElementById('userFormWrap').classList.remove('d-none');
@@ -880,7 +880,7 @@ if (lastError) console.error('Supabase error:', lastError);
 
     function showTaskForm(task = null) {
       const isEdit = !!task;
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Task</h5>
@@ -909,7 +909,7 @@ if (lastError) console.error('Supabase error:', lastError);
                   <select class="form-select" name="assigned_user" required>
                     <option value="">Chọn người thực hiện</option>
                     ${users.filter(u => u.active).map(u => 
-                      `<option value="${u.email}" ${task?.assigned_user === u.email ? 'selected' : ''}>${u.email}</option>`
+                      <option value="${u.email}" ${task?.assigned_user === u.email ? 'selected' : ''}>${u.email}</option>
                     ).join('')}
                   </select>
                 </div>
@@ -941,7 +941,7 @@ if (lastError) console.error('Supabase error:', lastError);
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('taskFormWrap').innerHTML = formHtml;
       document.getElementById('taskFormWrap').classList.remove('d-none');
@@ -1002,9 +1002,9 @@ if (lastError) console.error('Supabase error:', lastError);
         
         if (matches.length > 0) {
           suggestionsDiv.innerHTML = matches.map(p => 
-            `<div class="suggestion-item" data-id="${p.project_id}" data-name="${p.project_name}">
+            <div class="suggestion-item" data-id="${p.project_id}" data-name="${p.project_name}">
               ${p.project_name} (${p.project_id})
-            </div>`
+            </div>
           ).join('');
           suggestionsDiv.classList.remove('d-none');
         } else {
@@ -1036,12 +1036,12 @@ if (lastError) console.error('Supabase error:', lastError);
     function showWeeklyReportForm() {
       const currentWeek = getWeekNumber();
       const currentYear = new Date().getFullYear();
-      const weekYear = `${currentYear}-W${pad(currentWeek, 2)}`;
+      const weekYear = ${currentYear}-W${pad(currentWeek, 2)};
       
       // Get user's tasks for current week
       const userTasks = tasks.filter(t => t.assigned_user === currentUser.email);
       
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">Tạo báo cáo tuần ${weekYear}</h5>
@@ -1060,14 +1060,14 @@ if (lastError) console.error('Supabase error:', lastError);
                   <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                     ${userTasks.map(task => {
                       const project = projects.find(p => p.project_id === task.project_id);
-                      return `
+                      return 
                         <div class="form-check">
                           <input class="form-check-input" type="checkbox" name="completed_task_ids" value="${task.task_id}" id="task_${task.task_id}">
                           <label class="form-check-label" for="task_${task.task_id}">
                             ${task.task_name} - ${project ? project.project_name : 'N/A'}
                           </label>
                         </div>
-                      `;
+                      ;
                     }).join('')}
                   </div>
                 </div>
@@ -1087,7 +1087,7 @@ if (lastError) console.error('Supabase error:', lastError);
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('weeklyReportFormWrap').innerHTML = formHtml;
       document.getElementById('weeklyReportFormWrap').classList.remove('d-none');
@@ -1174,18 +1174,18 @@ if (lastError) console.error('Supabase error:', lastError);
           return task ? task.task_name : taskId;
         }).join(', ') || 'Không có';
         
-        alert(`Báo cáo tuần ${report.week_year}
+        alert(Báo cáo tuần ${report.week_year}
 Người báo cáo: ${report.user_email}
 Tasks hoàn thành: ${completedTaskNames}
 Tổng thời gian: ${report.total_hours} giờ
-Đề xuất: ${report.suggestions || 'Không có'}`);
+Đề xuất: ${report.suggestions || 'Không có'});
       }
     }
 
     /* CRUD Functions for Projects */
     function showProjectForm(project = null) {
       const isEdit = !!project;
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Dự án</h5>
@@ -1200,7 +1200,7 @@ Tổng thời gian: ${report.total_hours} giờ
                   <select class="form-select" name="customer_id" required>
                     <option value="">Chọn khách hàng</option>
                     ${clients.map(c => 
-                      `<option value="${c.id}" ${project?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>`
+                      <option value="${c.id}" ${project?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>
                     ).join('')}
                   </select>
                 </div>
@@ -1232,7 +1232,7 @@ Tổng thời gian: ${report.total_hours} giờ
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('projectFormWrap').innerHTML = formHtml;
       document.getElementById('projectFormWrap').classList.remove('d-none');
@@ -1287,7 +1287,7 @@ Tổng thời gian: ${report.total_hours} giờ
     /* CRUD Functions for Clients */
     function showClientForm(client = null) {
       const isEdit = !!client;
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Khách hàng</h5>
@@ -1325,7 +1325,7 @@ Tổng thời gian: ${report.total_hours} giờ
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('clientFormWrap').innerHTML = formHtml;
       document.getElementById('clientFormWrap').classList.remove('d-none');
@@ -1380,7 +1380,7 @@ Tổng thời gian: ${report.total_hours} giờ
     /* CRUD Functions for Contracts */
     function showContractForm(contract = null) {
       const isEdit = !!contract;
-      const formHtml = `
+      const formHtml = 
         <div class="card card-shadow mb-4">
           <div class="card-body">
             <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Hợp đồng</h5>
@@ -1391,7 +1391,7 @@ Tổng thời gian: ${report.total_hours} giờ
                   <select class="form-select" name="project_id" required>
                     <option value="">Chọn dự án</option>
                     ${projects.map(p => 
-                      `<option value="${p.project_id}" ${contract?.project_id === p.project_id ? 'selected' : ''}>${p.project_name}</option>`
+                      <option value="${p.project_id}" ${contract?.project_id === p.project_id ? 'selected' : ''}>${p.project_name}</option>
                     ).join('')}
                   </select>
                 </div>
@@ -1400,7 +1400,7 @@ Tổng thời gian: ${report.total_hours} giờ
                   <select class="form-select" name="customer_id" required>
                     <option value="">Chọn khách hàng</option>
                     ${clients.map(c => 
-                      `<option value="${c.id}" ${contract?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>`
+                      <option value="${c.id}" ${contract?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>
                     ).join('')}
                   </select>
                 </div>
@@ -1437,7 +1437,7 @@ Tổng thời gian: ${report.total_hours} giờ
             </form>
           </div>
         </div>
-      `;
+      ;
       
       document.getElementById('contractFormWrap').innerHTML = formHtml;
       document.getElementById('contractFormWrap').classList.remove('d-none');
