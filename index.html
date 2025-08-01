@@ -579,51 +579,73 @@
       }).join('');
     }
 
-    /* 2) AUTH */
-    async function checkAuth() {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) {
-        document.getElementById('authOverlay').classList.remove('d-none');
-        return false;
-      }
-      
-      const email = session.user.email;
-      const { data: profile } = await sb.from('user_profiles').select('*').eq('email', email).eq('active', true).single();
-      
-      if (!profile) {
-        document.getElementById('authError').textContent = 'Email không được phép truy cập.';
-        await sb.auth.signOut();
-        return false;
-      }
-      
-      currentUser = { email, role: profile.role };
-      document.getElementById('currentEmail').textContent = email;
-      document.getElementById('authOverlay').classList.add('d-none');
-      
-      // Hide project summary for non-admin/non-manager users
-      if (profile.role !== 'admin' && profile.role !== 'manager') {
-        document.getElementById('navProjectSummary').style.display = 'none';
-      }
-      
-      return true;
-    }
+    <!-- ===== AUTH (từ index(1).html) ===== -->
+<script>
+  /* Alias để code cũ vẫn chạy nhưng giữ nguyên 100 % nội dung auth */
+  async function loadAll(){ await loadData(); }      // tương đương loadData()
+  function renderAll(){ renderAllTables(); }         // tương đương renderAllTables()
 
-    async function signInWithGoogle() {
-      try {
-        const { error } = await sb.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: window.location.origin }
-        });
-        if (error) throw error;
-      } catch (error) {
-        document.getElementById('authError').textContent = error.message;
-      }
-    }
+  /* ===== AUTH HELPERS ===== */
+  function showAuthOverlay(msg=''){
+    const el = document.getElementById('authOverlay');
+    if (msg) document.getElementById('authError').textContent = msg;
+    el.classList.remove('d-none');
+  }
+  function hideAuthOverlay(){
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authOverlay').classList.add('d-none');
+  }
 
-    async function signOut() {
-      await sb.auth.signOut();
-      location.reload();
+  function applyRoleUI(){
+    /* PMS không có tab Services nên chỉ quản lý vai-trò khi cần */
+    const isElev = ['admin','BOM'].includes(currentUser.role);
+    // ví dụ: ẩn Users tab nếu không phải admin/BOM
+    const us = document.querySelector('#sidebarNav .nav-link[data-page="users"]');
+    if (us) us.parentElement.style.display = isElev ? '' : 'none';
+  }
+
+  /* ===== ENFORCE AUTH ===== */
+  async function enforceAuth(){
+    try{
+      const { data:{ user } } = await sb.auth.getUser();
+      if (!user){ showAuthOverlay(); return; }
+
+      const { data:prof, error } = await sb.from('user_profiles')
+        .select('role, active').eq('email', user.email).single();
+
+      if (error || !prof || !prof.active){
+        showAuthOverlay('email đăng nhập không thuộc hệ thống VSEC; hãy liên hệ admin');
+        await sb.auth.signOut();  return;
+      }
+
+      currentUser = { email:user.email, role:(prof.role||'user') };
+      document.getElementById('currentEmail').textContent = currentUser.email;
+
+      hideAuthOverlay();
+      await loadAll();
+      applyRoleUI();
+      renderAll();
+      showSection('dashboard');
+    }catch(e){
+      console.error(e);
+      showAuthOverlay('Không thể xác thực. Vui lòng thử lại.');
     }
+  }
+
+  /* ===== GOOGLE SIGN-IN ===== */
+  document.addEventListener('click', e=>{
+    if (e.target && e.target.id==='btnGoogle'){
+      sb.auth.signInWithOAuth({ provider:'google',
+        options:{ redirectTo: window.location.href } });
+    }
+  });
+
+  sb.auth.onAuthStateChange(() => enforceAuth());
+
+  /* ===== INIT ===== */
+  enforceAuth();
+</script>
+
 
     /* 3) DATA LOADING */
     async function loadData() {
@@ -1461,55 +1483,32 @@ Tổng thời gian: ${report.total_hours} giờ
     }
 
     /* 7) EVENT LISTENERS */
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Auth check
-      if (await checkAuth()) {
-        await loadData();
-      }
+  /* ————— DOMContentLoaded: bản rút gọn ————— */
+document.addEventListener('DOMContentLoaded', () => {
+  /* 1) Điều hướng sidebar */
+  document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const page = e.target.closest('a').dataset.page;
+      showSection(page);
 
-      // Navigation
-      document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const page = e.target.closest('a').dataset.page;
-          showSection(page);
-          
-          // Update user summary when viewing that page
-          if (page === 'user-summary') {
-            updateUserTaskSummary();
-          }
-          
-          // Update project summary when viewing that page
-          if (page === 'project-summary') {
-            renderProjectSummary();
-          }
-        });
-      });
-
-      // Auth buttons
-      document.getElementById('btnGoogle').addEventListener('click', signInWithGoogle);
-      document.getElementById('btnSignOut').addEventListener('click', signOut);
-
-      // Add buttons
-      document.getElementById('btnAddUser').addEventListener('click', () => showUserForm());
-      document.getElementById('btnAddTask').addEventListener('click', () => showTaskForm());
-      document.getElementById('btnAddWeeklyReport').addEventListener('click', showWeeklyReportForm);
-      document.getElementById('btnAddProject').addEventListener('click', () => showProjectForm());
-      document.getElementById('btnAddClient').addEventListener('click', () => showClientForm());
-      document.getElementById('btnAddContract').addEventListener('click', () => showContractForm());
-
-      // Auth state change listener
-      sb.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN') {
-          checkAuth().then(success => {
-            if (success) loadData();
-          });
-        } else if (event === 'SIGNED_OUT') {
-          location.reload();
-        }
-      });
+      if (page === 'user-summary')   updateUserTaskSummary();
+      if (page === 'project-summary') renderProjectSummary();
     });
-  </script>
+  });
+
+  /* 2) Nút “Add …” */
+  document.getElementById('btnAddUser')        .addEventListener('click', () => showUserForm());
+  document.getElementById('btnAddTask')        .addEventListener('click', () => showTaskForm());
+  document.getElementById('btnAddWeeklyReport').addEventListener('click', () => showWeeklyReportForm());
+  document.getElementById('btnAddProject')     .addEventListener('click', () => showProjectForm());
+  document.getElementById('btnAddClient')      .addEventListener('click', () => showClientForm());
+  document.getElementById('btnAddContract')    .addEventListener('click', () => showContractForm());
+
+  /* 3) Thực thi xác thực & nạp dữ liệu */
+  enforceAuth();   // enforceAuth() sẽ tự gọi loadAll() → loadData()
+});
+</script>
 </body>
 </html>
 
