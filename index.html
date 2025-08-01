@@ -676,7 +676,10 @@ sb.auth.onAuthStateChange((_event, _session)=>{ enforceAuth(); });
         renderProjectSummary();
         renderAllTables();
       } catch (error) {
-        console.error('Error loading data:', error);
+       console.log('--- loadData result ---', {
+  users, projects, tasks, weeklyReports, clients, contracts
+});
+if (lastError) console.error('Supabase error:', lastError);
       }
     }
 
