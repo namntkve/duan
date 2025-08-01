@@ -1,553 +1,490 @@
 
-    
-<!DOCTYPE html>
-<html lang="en">
+ 
+ <!doctype html>
+<html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project Management System</title>
-  <!-- Bootstrap CSS -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-    integrity="sha384-ENjdO4Dr2bkBIFxQpeoP+FZx0p3M9x9M9kF4YRq+8abtTE1Pi6jizo"
-    crossorigin="anonymous"
-  />
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/module/supabase.js"></script>
+  <!-- =========================================================
+       Project Manager Webapp – Supabase + Bootstrap (2025)
+       This single‑page web application provides a lightweight
+       interface for managing customers, projects and their
+       relationships according to the provided database schema.
+       It follows the look and feel of the supplied sample file
+       but trims away unused modules such as services, quotes and
+       opportunities. Authentication uses Supabase email/password
+       rather than Google; user profiles are stored in
+       ``public.user_profiles`` with roles determining access.
+  ========================================================= -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Project Manager • Supabase</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <!-- Supabase JS v2 (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
   <style>
-    body { padding-top: 4.5rem; }
-    .nav-link.active { font-weight: bold; }
-    .hidden { display: none; }
+    html, body { height: 100%; background-color: #f8f9fa; }
+    .sidebar { width: 280px; min-height: 100vh; position: sticky; top: 0; left: 0; border-right: 1px solid #e9ecef; background:#fff; }
+    .sidebar .nav-link { border-radius: .5rem; color: #334155; }
+    .sidebar .nav-link.active, .sidebar .nav-link:hover { background-color: #e7f1ff; color: #0d6efd; }
+    .content-wrap { margin-left: 0; }
+    @media (min-width: 992px) { .content-wrap { margin-left: 280px; } .sidebar { position: fixed; } }
+    .card-shadow { box-shadow: 0 8px 24px rgba(0,0,0,.06); border:1px solid #eef2f7; border-radius:1rem; }
+
+    /* Autocomplete dropdown */
+    .suggestions { position:absolute; z-index:1050; background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; max-height:260px; overflow-y:auto; width:100%; box-shadow:0 10px 22px rgba(0,0,0,.08); }
+    .suggestion-item { padding:.5rem .75rem; cursor:pointer; }
+    .suggestion-item:hover { background:#f5f7fb; }
+    .suggestion-item.text-primary { color:#0d6efd; }
+
+    .section-anchor { scroll-margin-top: 80px; }
+
+    /* Authentication overlay */
+    .auth-overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:3000;}
+    .auth-card{width:420px; border-radius:1rem; box-shadow:0 20px 40px rgba(0,0,0,.2);}  
   </style>
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">VSEC PMC</a>
-      <button
-        class="navbar-toggler"
-        type="button" data-bs-toggle="collapse"
-        data-bs-target="#navbarNav"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div
-        class="collapse navbar-collapse justify-content-end"
-        id="navbarNav"
-      >
-        <ul class="navbar-nav">
-          <li class="nav-item"><a class="nav-link active" data-section="dashboard" href="#">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" data-section="projects" href="#">Projects</a></li>
-          <li class="nav-item"><a class="nav-link" data-section="tasks" href="#">Tasks</a></li>
-          <li class="nav-item"><a class="nav-link" data-section="reports" href="#">Weekly Reports</a></li>
-          <li class="nav-item"><a class="nav-link" data-section="summary" href="#">Summary</a></li>
-          <li class="nav-item"><button id="btn-logout" class="btn btn-outline-light btn-sm">Log out</button></li>
-        </ul>
+
+  <!-- ===== AUTH OVERLAY ===== -->
+  <!-- The overlay covers the app until the user signs in. -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="card auth-card">
+      <div class="card-body">
+        <h5 class="fw-bold mb-2 text-center">Đăng nhập hệ thống</h5>
+        <p class="text-muted small text-center mb-3">Vui lòng nhập email và mật khẩu Supabase của bạn.</p>
+        <div class="mb-3">
+          <label class="form-label" for="login_email">Email</label>
+          <input type="email" class="form-control" id="login_email" placeholder="name@example.com" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="login_password">Mật khẩu</label>
+          <input type="password" class="form-control" id="login_password" placeholder="••••••" required>
+        </div>
+        <div id="authError" class="text-danger small mb-2"></div>
+        <button id="btnEmailSignIn" class="btn btn-primary w-100">Đăng nhập</button>
       </div>
     </div>
-  </nav>
-
-  <!-- Main container -->
-  <div class="container">
-    <!-- Login prompt -->
-    <div id="login-screen" class="text-center mt-5">
-      <h3>Please sign in with Google</h3>
-      <button id="btn-login" class="btn btn-primary">Sign in with Google</button>
-    </div>
-
-    <!-- Dashboard -->
-    <div id="dashboard" class="section hidden">
-      <h2>Welcome, <span id="user-email"></span></h2>
-      <p>Use the menu to navigate through the system.</p>
-    </div>
-
-    <!-- Projects Section -->
-    <div id="projects" class="section hidden">
-      <h2>Projects</h2>
-      <button id="btn-new-project" class="btn btn-success mb-3">New Project</button>
-      <table class="table table-striped">
-        <thead>
-          <tr><th>ID</th><th>Name</th><th>Customer</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="projects-body"></tbody>
-      </table>
-    </div>
-
-    <!-- Tasks Section -->
-    <div id="tasks" class="section hidden">
-      <h2>Tasks</h2>
-      <button id="btn-new-task" class="btn btn-success mb-3">New Task</button>
-      <table class="table table-striped">
-        <thead>
-          <tr><th>Title</th><th>Project</th><th>Assigned To</th><th>Status</th><th>Due</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="tasks-body"></tbody>
-      </table>
-    </div>
-
-    <!-- Weekly Reports Section -->
-    <div id="reports" class="section hidden">
-      <h2>Weekly Reports</h2>
-      <button id="btn-new-report" class="btn btn-success mb-3">New Report</button>
-      <table class="table table-striped">
-        <thead>
-          <tr><th>Week</th><th>Summary</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="reports-body"></tbody>
-      </table>
-    </div>
-
-    <!-- Summary Section -->
-    <div id="summary" class="section hidden">
-      <h2>Project Summary</h2>
-      <table class="table table-striped">
-        <thead>
-          <tr><th>Project</th><th>Week</th><th>Total</th><th>Done</th><th>Progress %</th></tr>
-        </thead>
-        <tbody id="summary-body"></tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- Modals -->
-  <!-- Project Modal -->
-  <div class="modal fade" id="modal-project" tabindex="-1">
-    <div class="modal-dialog">
-      <form id="form-project" class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Project</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <input type="hidden" id="project-id" />
-          <div class="mb-3">
-            <label>Name</label>
-            <input id="project-name" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label>Customer ID</label>
-            <input id="project-customer" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label>Start Date</label>
-            <input id="project-start" type="date" class="form-control" />
-          </div>
-          <div class="mb-3">
-            <label>End Date</label>
-            <input id="project-end" type="date" class="form-control" />
-          </div>
-          <div class="mb-3">
-            <label>Status</label>
-            <input id="project-status" class="form-control" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
+  <!-- ========================= SIDEBAR ========================= -->
+  <aside class="sidebar p-3">
+    <a class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+      <span class="fs-5 fw-bold"><i class="bi bi-kanban me-2"></i>Project Manager</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column gap-1" id="sidebarNav">
+      <li class="nav-item"><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="customers"><i class="bi bi-people me-2"></i>Customers</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="projects"><i class="bi bi-kanban me-2"></i>Projects</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="tasks"><i class="bi bi-list-check me-2"></i>Tasks</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="users" id="navUsers"><i class="bi bi-person-gear me-2"></i>Users</a></li>
+    </ul>
+    <hr>
+    <div class="dropdown">
+      <a class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+        <img src="https://ui-avatars.com/api/?name=PM&background=0D6EFD&color=fff" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong id="currentEmail">guest@local</strong>
+      </a>
+      <ul class="dropdown-menu shadow">
+        <li><a class="dropdown-item" href="#" id="btnSignOut"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+      </ul>
     </div>
-  </div>
+  </aside>
 
-  <!-- Task Modal -->
-  <div class="modal fade" id="modal-task" tabindex="-1">
-    <div class="modal-dialog">
-      <form id="form-task" class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Task</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  <!-- ========================= MAIN ========================= -->
+  <main class="content-wrap">
+    <div class="container-fluid py-4">
+
+      <!-- DASHBOARD -->
+      <section id="page-dashboard" class="section-anchor">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
         </div>
-        <div class="modal-body">
-          <input type="hidden" id="task-id" />
-          <div class="mb-3">
-            <label>Title</label>
-            <input id="task-title" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label>Project ID</label>
-            <input id="task-project" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label>Assigned To (email)</label>
-            <input id="task-user" type="email" class="form-control" />
-          </div>
-          <div class="mb-3">
-            <label>Status</label>
-            <select id="task-status" class="form-select">
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="waiting_review">Waiting Review</option>
-              <option value="done">Done</option>
-              <option value="blocked">Blocked</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>Due Date</label>
-            <input id="task-due" type="date" class="form-control" />
-          </div>
+        <div class="row g-4">
+          <div class="col-12 col-sm-6 col-lg-4"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Customers</h6><h2 class="fw-bold mb-0" id="kpiCustomers">0</h2></div></div></div>
+          <div class="col-12 col-sm-6 col-lg-4"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Projects</h6><h2 class="fw-bold mb-0" id="kpiProjects">0</h2></div></div></div>
+          <div class="col-12 col-sm-6 col-lg-4"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Tasks</h6><h2 class="fw-bold mb-0" id="kpiTasks">0</h2></div></div></div>
         </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </section>
+
+      <!-- CUSTOMERS -->
+      <section id="page-customers" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-people me-2"></i>Customers</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddCustomer"><i class="bi bi-plus-lg me-1"></i>Thêm khách hàng</button></div>
         </div>
-      </form>
+        <div id="customerFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Tax</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="customerTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- PROJECTS -->
+      <section id="page-projects" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-kanban me-2"></i>Projects</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddProject"><i class="bi bi-plus-lg me-1"></i>Thêm dự án</button></div>
+        </div>
+        <div id="projectFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Tên dự án</th><th>Khách hàng chính</th><th>Start</th><th>End</th><th>Status</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="projectTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- TASKS -->
+      <section id="page-tasks" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-list-check me-2"></i>Tasks</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddTask"><i class="bi bi-plus-lg me-1"></i>Thêm nhiệm vụ</button></div>
+        </div>
+        <div id="taskFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Tiêu đề</th>
+                <th>Dự án</th>
+                <th>Người thực hiện</th>
+                <th>Trạng thái</th>
+                <th>Ưu tiên</th>
+                <th>Start</th>
+                <th>Due</th>
+                <th style="width:120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="taskTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- USERS -->
+      <section id="page-users" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-person-gear me-2"></i>Users</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddUser"><i class="bi bi-plus-lg me-1"></i>Thêm user</button></div>
+        </div>
+        <div id="userFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="userTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
     </div>
-  </div>
+  </main>
 
-  <!-- Report Modal -->
-  <div class="modal fade" id="modal-report" tabindex="-1">
-    <div class="modal-dialog">
-      <form id="form-report" class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Weekly Report</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <input type="hidden" id="report-id" />
-          <div class="mb-3">
-            <label>Year</label>
-            <input id="report-year" type="number" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label>Week #</label>
-            <input id="report-week" type="number" class="form-control" required min="1" max="53"/>
-          </div>
-          <div class="mb-3">
-            <label>Summary</label>
-            <textarea id="report-summary" class="form-control"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Bootstrap JS & Dependencies -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-  ></script>
-
+  <!-- ========================= APP SCRIPTS ========================= -->
   <script>
-    // ---------- Supabase init ----------
+    /* 1) SUPABASE CONFIG */
+    // Replace with your own Supabase project URL and public anon key.
+      // ---------- Supabase init ----------
    const SUPABASE_URL = 'https://jhybbyzpgyfxtfpnuhqt.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoeWJieXpwZ3lmeHRmcG51aHF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMTg2MTgsImV4cCI6MjA2OTU5NDYxOH0.d0jrlFshaX-y_HSuVL_LOo0JsPvD1qqm4ceK1styUaQ';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ---------- DOM references ----------
-    const loginScreen = document.getElementById('login-screen');
-    const btnLogin = document.getElementById('btn-login');
-    const btnLogout = document.getElementById('btn-logout');
-    const userEmailSpan = document.getElementById('user-email');
-    const sections = document.querySelectorAll('.section');
-    const navLinks = document.querySelectorAll('.nav-link[data-section]');
 
-    // Modal forms
-    const modalProjectElem = new bootstrap.Modal(document.getElementById('modal-project'));
-    const formProject = document.getElementById('form-project');
-    const modalTaskElem = new bootstrap.Modal(document.getElementById('modal-task'));
-    const formTask = document.getElementById('form-task');
-    const modalReportElem = new bootstrap.Modal(document.getElementById('modal-report'));
-    const formReport = document.getElementById('form-report');
-
-    // Data holders
-    let currentUser = null;
+    /* 2) STATE */
+    let currentUser = { email: null, role: 'user' };
+    let customers = [];
     let projects = [];
+    let projectCustomers = [];
     let tasks = [];
-    let reports = [];
-    let summaries = [];
+    let users = [];
 
-    // ---------- AUTH handlers ----------
-    async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        currentUser = session.user;
-        showApp();
-      } else {
-        showLogin();
-      }
+    /* 3) UTILITY FUNCTIONS */
+    const pad = (n,w) => (n+'').padStart(w,'0');
+    function generateCustomerId(){ const used = customers.map(c => parseInt((c.id||'').slice(1),10)).filter(Number.isFinite); for(let i=1;i<10000;i++) if(!used.includes(i)) return 'C' + pad(i,4); throw new Error('Hết mã khách hàng'); }
+    function generateProjectId(){ const y = new Date().getFullYear().toString().slice(-2); const used = projects.filter(p => (p.project_id||'').startsWith('P_' + y)).map(p => parseInt(p.project_id.slice(4),10)).filter(Number.isFinite); for(let i=1;i<1000;i++) if(!used.includes(i)) return 'P_' + y + pad(i,3); throw new Error('Hết mã dự án'); }
+
+    function money(n){ return (n||0).toLocaleString('vi-VN'); }
+
+    // Autocomplete helpers
+    document.addEventListener('click',(e)=>{ if(!e.target.closest('.suggestions') && !e.target.closest('input')) document.querySelectorAll('.suggestions').forEach(b => b.classList.add('d-none')); });
+
+    function suggestCustomer(q, fld){ const box = document.getElementById(`${fld}_sugs`); box.innerHTML = ''; if(!q){ box.classList.add('d-none'); return; } const list = customers.filter(c => (c.name||'').toLowerCase().includes(q.toLowerCase()) || (c.id||'').toLowerCase().includes(q.toLowerCase())); if(list.length){ list.forEach(c => { const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = `${c.id} – ${c.name}`; d.onclick = () => { document.getElementById(fld).value = c.name; const hid = document.getElementById(`${fld}_id`); if(hid) hid.value = c.id; box.classList.add('d-none'); }; box.appendChild(d); }); box.classList.remove('d-none'); } else { box.classList.add('d-none'); } }
+
+    /* 4) DATA LOADING */
+    async function loadAll(){ const rs = await Promise.all([
+      sb.from('customers').select('*').order('id'),
+      sb.from('projects').select('*').order('project_id'),
+      sb.from('project_customers').select('*'),
+      sb.from('tasks').select('*').order('created_at'),
+      sb.from('user_profiles').select('*').order('email')
+    ]);
+      customers = rs[0].data || [];
+      projects = rs[1].data || [];
+      projectCustomers = rs[2].data || [];
+      tasks = rs[3].data || [];
+      users = rs[4].data || [];
     }
 
-    btnLogin.addEventListener('click', async () => {
-      await supabase.auth.signInWithOAuth({ provider: 'google' });
-    });
+    /* 5) RENDERING */
+    function setKPIs(){ document.getElementById('kpiCustomers').textContent = customers.length; document.getElementById('kpiProjects').textContent = projects.length; document.getElementById('kpiTasks').textContent = tasks.length; }
 
-    btnLogout.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      location.reload();
-    });
+    function renderDashboard(){ setKPIs(); }
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      checkAuth();
-    });
+    function renderCustomers(){ const tbody = document.getElementById('customerTbody'); tbody.innerHTML = customers.map(c => `
+        <tr>
+          <td>${c.id}</td>
+          <td class="text-start">${c.name || ''}</td>
+          <td>${c.contact_person || ''}</td>
+          <td>${c.phone || ''}</td>
+          <td>${c.email || ''}</td>
+          <td>${c.tax_code || ''}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openCustomerForm('${c.id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${c.id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `).join(''); }
 
-    // ---------- UI helpers ----------
-    function showLogin() {
-      loginScreen.classList.remove('hidden');
-      sections.forEach(s => s.classList.add('hidden'));
-      btnLogout.style.display = 'none';
-    }
-
-    function showApp() {
-      loginScreen.classList.add('hidden');
-      document.getElementById('dashboard').classList.remove('hidden');
-      btnLogout.style.display = 'inline-block';
-      userEmailSpan.textContent = currentUser.email;
-      loadAll();
-    }
-
-    navLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        navLinks.forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-        const sec = link.dataset.section;
-        sections.forEach(s => s.id === sec ? s.classList.remove('hidden') : s.classList.add('hidden'));
-      });
-    });
-
-    // ---------- Data loading ----------
-    async function loadAll() {
-      await Promise.all([loadProjects(), loadTasks(), loadReports(), loadSummary()]);
-    }
-
-    async function loadProjects() {
-      let { data, error } = await supabase
-        .from('projects')
-        .select('*');
-      if (!error) {
-        projects = data;
-        renderProjects();
-      }
-    }
-
-    function renderProjects() {
-      const tbody = document.getElementById('projects-body');
-      tbody.innerHTML = '';
-      projects.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+    function renderProjects(){ const tbody = document.getElementById('projectTbody'); tbody.innerHTML = projects.map(p => { const c = customers.find(x => x.id === p.customer_id); return `
+        <tr>
           <td>${p.project_id}</td>
-          <td>${p.project_name}</td>
-          <td>${p.customer_id}</td>
+          <td class="text-start">${p.project_name || ''}</td>
+          <td class="text-start">${c ? c.name : p.customer_id}</td>
           <td>${p.start_date || ''}</td>
           <td>${p.end_date || ''}</td>
           <td>${p.status || ''}</td>
           <td>
-            <button class="btn btn-sm btn-primary" onclick="editProject('${p.project_id}')">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteProject('${p.project_id}')">🗑️</button>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openProjectForm('${p.project_id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${p.project_id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `; }).join(''); }
 
-    async function loadTasks() {
-      let { data, error } = await supabase
-        .from('tasks')
-        .select('*');
-      if (!error) {
-        tasks = data;
-        renderTasks();
-      }
-    }
-
-    function renderTasks() {
-      const tbody = document.getElementById('tasks-body');
-      tbody.innerHTML = '';
-      tasks.forEach(t => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${t.title}</td>
-          <td>${t.project_id}</td>
-          <td>${t.assigned_to || ''}</td>
-          <td>${t.status}</td>
+    function renderTasks(){ const tbody=document.getElementById('taskTbody'); tbody.innerHTML = tasks.map(t => { const proj = projects.find(p => p.project_id === t.project_id); const usr = users.find(u => u.email === t.assigned_to); return `
+        <tr>
+          <td>${t.task_id}</td>
+          <td class="text-start">${t.title || ''}</td>
+          <td class="text-start">${proj ? proj.project_name : t.project_id || ''}</td>
+          <td class="text-start">${usr ? (usr.name || usr.email) : (t.assigned_to || '')}</td>
+          <td>${t.status || ''}</td>
+          <td>${t.priority || ''}</td>
+          <td>${t.start_date || ''}</td>
           <td>${t.due_date || ''}</td>
           <td>
-            <button class="btn btn-sm btn-primary" onclick="editTask('${t.task_id}')">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteTask('${t.task_id}')">🗑️</button>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openTaskForm('${t.task_id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${t.task_id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`; }).join(''); }
 
-    async function loadReports() {
-      let { data, error } = await supabase
-        .from('weekly_reports')
-        .select('*')
-        .eq('user_email', currentUser.email);
-      if (!error) {
-        reports = data;
-        renderReports();
-      }
-    }
-
-    function renderReports() {
-      const tbody = document.getElementById('reports-body');
-      tbody.innerHTML = '';
-      reports.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.week_year}-W${r.week_number}</td>
-          <td>${r.summary || ''}</td>
+    function renderUsers(){ const tbody=document.getElementById('userTbody'); tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.email}</td>
+          <td>${u.name || ''}</td>
+          <td>${u.role || ''}</td>
+          <td>${u.active ? '✔' : '✖'}</td>
           <td>
-            <button class="btn btn-sm btn-primary" onclick="editReport('${r.weekly_report_id}')">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteReport('${r.weekly_report_id}')">🗑️</button>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openUserForm('${u.id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${u.id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `).join(''); }
 
-    async function loadSummary() {
-      let { data, error } = await supabase
-        .from('project_summary')
-        .select('*');
-      if (!error) {
-        summaries = data;
-        renderSummary();
-      }
-    }
+    function renderAll(){ renderDashboard(); renderCustomers(); renderProjects(); renderTasks(); renderUsers(); }
 
-    function renderSummary() {
-      const tbody = document.getElementById('summary-body');
-      tbody.innerHTML = '';
-      summaries.forEach(s => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${s.project_id}</td>
-          <td>${s.week_year}-W${s.week_number}</td>
-          <td>${s.total_tasks}</td>
-          <td>${s.completed_tasks}</td>
-          <td>${s.progress_percent}%</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+    /* 6) CUSTOMER CRUD */
+    function openCustomerForm(id=''){ const wrap = document.getElementById('customerFormWrap'); const isEdit = !!id; const c = isEdit ? customers.find(x => x.id === id) : {}; wrap.classList.remove('d-none'); wrap.scrollIntoView({ behavior:'smooth', block:'start' }); wrap.innerHTML = `
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit ? 'Sửa' : 'Thêm'} khách hàng</h5>
+          <div class="row g-3">
+            <div class="col-md-2"><label class="form-label">ID</label><input class="form-control" disabled id="cust_id" value="${isEdit ? c.id : generateCustomerId()}"></div>
+            <div class="col-md-10 position-relative"><label class="form-label">Tên khách hàng</label><input class="form-control" id="cust_name" value="${c?.name || ''}" autocomplete="off"></div>
+            <div class="col-md-4"><label class="form-label">Người liên hệ</label><input class="form-control" id="cust_contact" value="${c?.contact_person || ''}"></div>
+            <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" id="cust_phone" value="${c?.phone || ''}"></div>
+            <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" id="cust_email" value="${c?.email || ''}"></div>
+            <div class="col-md-8"><label class="form-label">Địa chỉ</label><input class="form-control" id="cust_address" value="${c?.address || ''}"></div>
+            <div class="col-md-4"><label class="form-label">Mã số thuế</label><input class="form-control" id="cust_tax" value="${c?.tax_code || ''}"></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit ? `updateCustomer('${id}')` : 'addCustomer()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('customerFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>`; }
 
-    // ---------- CRUD Projects ----------
-    document.getElementById('btn-new-project').onclick = () => {
-      formProject.reset();
-      document.getElementById('project-id').value = '';
-      modalProjectElem.show();
-    };
-    async function editProject(id) {
-      const p = projects.find(x => x.project_id === id);
-      document.getElementById('project-id').value = p.project_id;
-      document.getElementById('project-name').value = p.project_name;
-      document.getElementById('project-customer').value = p.customer_id;
-      document.getElementById('project-start').value = p.start_date;
-      document.getElementById('project-end').value = p.end_date;
-      document.getElementById('project-status').value = p.status;
-      modalProjectElem.show();
-    }
-    formProject.onsubmit = async e => {
-      e.preventDefault();
-      const id = document.getElementById('project-id').value;
-      const payload = {
-        project_id: id || `P${Date.now()}`,
-        project_name: document.getElementById('project-name').value,
-        customer_id: document.getElementById('project-customer').value,
-        start_date: document.getElementById('project-start').value || null,
-        end_date: document.getElementById('project-end').value || null,
-        status: document.getElementById('project-status').value
+    async function addCustomer(){ const payload={ id: document.getElementById('cust_id').value, name: document.getElementById('cust_name').value.trim(), contact_person: document.getElementById('cust_contact').value || null, phone: document.getElementById('cust_phone').value || null, email: document.getElementById('cust_email').value || null, address: document.getElementById('cust_address').value || null, tax_code: document.getElementById('cust_tax').value || null, created_at: new Date().toISOString() }; if(!payload.name) return alert('Tên khách hàng không được trống'); const { error } = await sb.from('customers').insert([payload]); if(error) return alert(error.message); await loadAll(); renderCustomers(); renderDashboard(); document.getElementById('customerFormWrap').classList.add('d-none'); }
+
+    async function updateCustomer(id){ const payload={ name: document.getElementById('cust_name').value.trim(), contact_person: document.getElementById('cust_contact').value || null, phone: document.getElementById('cust_phone').value || null, email: document.getElementById('cust_email').value || null, address: document.getElementById('cust_address').value || null, tax_code: document.getElementById('cust_tax').value || null, updated_at: new Date().toISOString(), updated_by: currentUser.email }; if(!payload.name) return alert('Tên khách hàng không được trống'); const { error } = await sb.from('customers').update(payload).eq('id', id); if(error) return alert(error.message); await loadAll(); renderCustomers(); renderDashboard(); document.getElementById('customerFormWrap').classList.add('d-none'); }
+
+    async function deleteCustomer(id){ if(!confirm('Xóa khách hàng?')) return; const { error } = await sb.from('customers').delete().eq('id', id); if(error) return alert(error.message); await loadAll(); renderCustomers(); renderDashboard(); }
+
+    /* 7) PROJECT CRUD */
+    function openProjectForm(id=''){ const wrap = document.getElementById('projectFormWrap'); const isEdit = !!id; const p = isEdit ? projects.find(x => x.project_id === id) : {};
+      // Determine primary and extra customers
+      const extras = projectCustomers.filter(pc => pc.project_id === id && !pc.is_primary).map(pc => pc.customer_id);
+      wrap.classList.remove('d-none'); window.scrollTo({ top: 0, behavior:'smooth' }); wrap.innerHTML = `
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit ? 'Sửa' : 'Thêm'} dự án</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="pr_id" value="${isEdit ? p.project_id : generateProjectId()}"></div>
+            <div class="col-md-9"><label class="form-label">Tên dự án</label><input class="form-control" id="pr_name" value="${p?.project_name || ''}"></div>
+            <div class="col-md-6 position-relative"><label class="form-label">Khách hàng chính</label><input class="form-control" id="pr_client" autocomplete="off" value="${(() => { const c = customers.find(x => x.id === p?.customer_id); return c ? c.name : '' })()}" oninput="suggestCustomer(this.value,'pr_client')"><div id="pr_client_sugs" class="suggestions d-none"></div><input type="hidden" id="pr_client_id" value="${p?.customer_id || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Khách hàng phụ (nhấn giữ Ctrl/Command để chọn nhiều)</label><select id="pr_extras" class="form-select" multiple size="${Math.min(customers.length,5)}">
+              ${customers.map(c => `<option value="${c.id}" ${extras.includes(c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
+            </select></div>
+            <div class="col-md-3"><label class="form-label">Start</label><input type="date" class="form-control" id="pr_start" value="${p?.start_date || ''}"></div>
+            <div class="col-md-3"><label class="form-label">End</label><input type="date" class="form-control" id="pr_end" value="${p?.end_date || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" id="pr_status"><option${p?.status === 'Chuẩn bị' ? ' selected' : ''}>Chuẩn bị</option><option${p?.status === 'Đang triển khai' ? ' selected' : ''}>Đang triển khai</option><option${p?.status === 'Hoàn thành' ? ' selected' : ''}>Hoàn thành</option><option${p?.status === 'Hủy' ? ' selected' : ''}>Hủy</option></select></div>
+            <div class="col-12"><label class="form-label">Mô tả</label><textarea class="form-control" rows="2" id="pr_desc">${p?.description || ''}</textarea></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit ? `updateProject('${id}')` : 'addProject()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('projectFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>`; }
+
+    async function addProject(){ const payload={ project_id: document.getElementById('pr_id').value, project_name: document.getElementById('pr_name').value.trim(), customer_id: document.getElementById('pr_client_id').value, description: document.getElementById('pr_desc').value || null, start_date: document.getElementById('pr_start').value || null, end_date: document.getElementById('pr_end').value || null, status: document.getElementById('pr_status').value, created_at: new Date().toISOString(), created_by: currentUser.email }; if(!payload.project_name) return alert('Tên dự án không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng chính'); const { error } = await sb.from('projects').insert([payload]); if(error) return alert(error.message); // insert project_customers for extras
+      const extras = Array.from(document.getElementById('pr_extras').selectedOptions).map(opt => ({ project_id: payload.project_id, customer_id: opt.value, is_primary: false, created_at: new Date().toISOString(), created_by: currentUser.email })); if(extras.length){ const { error: pcErr } = await sb.from('project_customers').insert(extras); if(pcErr) return alert(pcErr.message); }
+      await loadAll(); renderProjects(); renderDashboard(); document.getElementById('projectFormWrap').classList.add('d-none'); }
+
+    async function updateProject(id){ const payload={ project_name: document.getElementById('pr_name').value.trim(), customer_id: document.getElementById('pr_client_id').value, description: document.getElementById('pr_desc').value || null, start_date: document.getElementById('pr_start').value || null, end_date: document.getElementById('pr_end').value || null, status: document.getElementById('pr_status').value, updated_at: new Date().toISOString(), updated_by: currentUser.email }; if(!payload.project_name) return alert('Tên dự án không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng chính'); const { error } = await sb.from('projects').update(payload).eq('project_id', id); if(error) return alert(error.message); // update extras: remove existing extras then insert new
+      const { error: delErr } = await sb.from('project_customers').delete().eq('project_id', id); if(delErr) return alert(delErr.message); const extras = Array.from(document.getElementById('pr_extras').selectedOptions).map(opt => ({ project_id: id, customer_id: opt.value, is_primary: false, created_at: new Date().toISOString(), created_by: currentUser.email })); if(extras.length){ const { error: pcErr } = await sb.from('project_customers').insert(extras); if(pcErr) return alert(pcErr.message); }
+      await loadAll(); renderProjects(); renderDashboard(); document.getElementById('projectFormWrap').classList.add('d-none'); }
+
+    async function deleteProject(id){ if(!confirm('Xóa dự án?')) return; // delete children first
+      const { error: pcErr } = await sb.from('project_customers').delete().eq('project_id', id); if(pcErr) return alert(pcErr.message); const { error } = await sb.from('projects').delete().eq('project_id', id); if(error) return alert(error.message); await loadAll(); renderProjects(); renderDashboard(); }
+
+    /* 7.5) TASK CRUD */
+    function openTaskForm(id=''){ const wrap = document.getElementById('taskFormWrap'); const isEdit = !!id; const t = isEdit ? tasks.find(x => x.task_id === id) : {};
+      wrap.classList.remove('d-none'); wrap.scrollIntoView({ behavior:'smooth', block:'start' });
+      const projOptions = projects.map(p => `<option value="${p.project_id}" ${p.project_id === (t?.project_id||'') ? 'selected' : ''}>${p.project_name}</option>`).join('');
+      const userOptions = users.filter(u => u.active !== false).map(u => `<option value="${u.email}" ${u.email === (t?.assigned_to||'') ? 'selected' : ''}>${u.name || u.email}</option>`).join('');
+      wrap.innerHTML = `
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} nhiệm vụ</h5>
+          <div class="row g-3">
+            <div class="col-md-4"><label class="form-label">Tiêu đề</label><input class="form-control" id="task_title" value="${t?.title || ''}"></div>
+            <div class="col-md-4"><label class="form-label">Dự án</label><select class="form-select" id="task_project">${projOptions}</select></div>
+            <div class="col-md-4"><label class="form-label">Người thực hiện</label><select class="form-select" id="task_assign"><option value="">-- không --</option>${userOptions}</select></div>
+            <div class="col-md-4"><label class="form-label">Trạng thái</label><select class="form-select" id="task_status">
+                <option value="todo" ${t?.status==='todo'?'selected':''}>Chưa làm</option>
+                <option value="in_progress" ${t?.status==='in_progress'?'selected':''}>Đang làm</option>
+                <option value="waiting_review" ${t?.status==='waiting_review'?'selected':''}>Chờ duyệt</option>
+                <option value="done" ${t?.status==='done'?'selected':''}>Hoàn thành</option>
+                <option value="blocked" ${t?.status==='blocked'?'selected':''}>Bị chặn</option>
+            </select></div>
+            <div class="col-md-2"><label class="form-label">Ưu tiên</label><input type="number" class="form-control" id="task_priority" value="${t?.priority ?? ''}" min="0" max="9"></div>
+            <div class="col-md-3"><label class="form-label">Start</label><input type="date" class="form-control" id="task_start" value="${t?.start_date || ''}"></div>
+            <div class="col-md-3"><label class="form-label">Due</label><input type="date" class="form-control" id="task_due" value="${t?.due_date || ''}"></div>
+            <div class="col-md-3"><label class="form-label">Planned hours</label><input type="number" class="form-control" id="task_planned" value="${t?.planned_hours ?? ''}" step="0.5" min="0"></div>
+            <div class="col-md-3"><label class="form-label">Actual hours</label><input type="number" class="form-control" id="task_actual" value="${t?.actual_hours ?? ''}" step="0.5" min="0"></div>
+            <div class="col-12"><label class="form-label">Mô tả</label><textarea class="form-control" rows="2" id="task_desc">${t?.description || ''}</textarea></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit?`updateTask('${id}')`:'addTask()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('taskFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>`; }
+
+    async function addTask(){ const title = document.getElementById('task_title').value.trim(); if(!title) return alert('Tiêu đề không được trống'); const payload = {
+        task_id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : undefined,
+        project_id: document.getElementById('task_project').value,
+        title,
+        description: document.getElementById('task_desc').value || null,
+        assigned_to: document.getElementById('task_assign').value || null,
+        status: document.getElementById('task_status').value,
+        priority: parseInt(document.getElementById('task_priority').value || '0', 10),
+        start_date: document.getElementById('task_start').value || null,
+        due_date: document.getElementById('task_due').value || null,
+        planned_hours: parseFloat(document.getElementById('task_planned').value || '0'),
+        actual_hours: parseFloat(document.getElementById('task_actual').value || '0'),
+        created_at: new Date().toISOString(),
+        created_by: currentUser.email
       };
-      if (id) {
-        await supabase.from('projects').update(payload).eq('project_id', id);
-      } else {
-        await supabase.from('projects').insert(payload);
-      }
-      modalProjectElem.hide();
-      loadProjects();
-    };
-    async function deleteProject(id) {
-      if (confirm('Delete project ' + id + '?')) {
-        await supabase.from('projects').delete().eq('project_id', id);
-        loadProjects();
-      }
-    }
+      const { error } = await sb.from('tasks').insert([payload]); if(error) return alert(error.message); await loadAll(); renderTasks(); renderDashboard(); document.getElementById('taskFormWrap').classList.add('d-none'); }
 
-    // ---------- CRUD Tasks ----------
-    document.getElementById('btn-new-task').onclick = () => {
-      formTask.reset();
-      document.getElementById('task-id').value = '';
-      modalTaskElem.show();
-    };
-    async function editTask(id) {
-      const t = tasks.find(x => x.task_id === id);
-      document.getElementById('task-id').value = t.task_id;
-      document.getElementById('task-title').value = t.title;
-      document.getElementById('task-project').value = t.project_id;
-      document.getElementById('task-user').value = t.assigned_to;
-      document.getElementById('task-status').value = t.status;
-      document.getElementById('task-due').value = t.due_date;
-      modalTaskElem.show();
-    }
-    formTask.onsubmit = async e => {
-      e.preventDefault();
-      const id = document.getElementById('task-id').value;
-      const payload = {
-        title: document.getElementById('task-title').value,
-        project_id: document.getElementById('task-project').value,
-        assigned_to: document.getElementById('task-user').value,
-        status: document.getElementById('task-status').value,
-        due_date: document.getElementById('task-due').value || null
+    async function updateTask(id){ const title = document.getElementById('task_title').value.trim(); if(!title) return alert('Tiêu đề không được trống'); const payload = {
+        title,
+        project_id: document.getElementById('task_project').value,
+        description: document.getElementById('task_desc').value || null,
+        assigned_to: document.getElementById('task_assign').value || null,
+        status: document.getElementById('task_status').value,
+        priority: parseInt(document.getElementById('task_priority').value || '0', 10),
+        start_date: document.getElementById('task_start').value || null,
+        due_date: document.getElementById('task_due').value || null,
+        planned_hours: parseFloat(document.getElementById('task_planned').value || '0'),
+        actual_hours: parseFloat(document.getElementById('task_actual').value || '0'),
+        updated_at: new Date().toISOString(),
+        updated_by: currentUser.email
       };
-      if (id) {
-        await supabase.from('tasks').update(payload).eq('task_id', id);
-      } else {
-        await supabase.from('tasks').insert(payload);
-      }
-      modalTaskElem.hide();
-      loadTasks();
-    };
-    async function deleteTask(id) {
-      if (confirm('Delete task?')) {
-        await supabase.from('tasks').delete().eq('task_id', id);
-        loadTasks();
-      }
-    }
+      const { error } = await sb.from('tasks').update(payload).eq('task_id', id); if(error) return alert(error.message); await loadAll(); renderTasks(); renderDashboard(); document.getElementById('taskFormWrap').classList.add('d-none'); }
 
-    // ---------- CRUD Reports ----------
-    document.getElementById('btn-new-report').onclick = () => {
-      formReport.reset();
-      document.getElementById('report-id').value = '';
-      modalReportElem.show();
-    };
-    async function editReport(id) {
-      const r = reports.find(x => x.weekly_report_id === id);
-      document.getElementById('report-id').value = r.weekly_report_id;
-      document.getElementById('report-year').value = r.week_year;
-      document.getElementById('report-week').value = r.week_number;
-      document.getElementById('report-summary').value = r.summary;
-      modalReportElem.show();
-    }
-    formReport.onsubmit = async e => {
-      e.preventDefault();
-      const id = document.getElementById('report-id').value;
-      const payload = {
-        user_email: currentUser.email,
-        week_year: parseInt(document.getElementById('report-year').value),
-        week_number: parseInt(document.getElementById('report-week').value),
-        summary: document.getElementById('report-summary').value
-      };
-      if (id) {
-        await supabase.from('weekly_reports').update(payload).eq('weekly_report_id', id);
-      } else {
-        await supabase.from('weekly_reports').insert(payload);
-      }
-      modalReportElem.hide();
-      loadReports();
-    };
-    async function deleteReport(id) {
-      if (confirm('Delete report?')) {
-        await supabase.from('weekly_reports').delete().eq('weekly_report_id', id);
-        loadReports();
-      }
-    }
+    async function deleteTask(id){ if(!confirm('Xóa nhiệm vụ?')) return; const { error } = await sb.from('tasks').delete().eq('task_id', id); if(error) return alert(error.message); await loadAll(); renderTasks(); renderDashboard(); }
 
-    // ---------- Initialize ----------
-    checkAuth();
+    /* 8) USER MANAGEMENT (admin only) */
+    function openUserForm(id=''){ const wrap=document.getElementById('userFormWrap'); const isEdit=!!id; const u=isEdit?users.find(x=>x.id===id):{}; wrap.classList.remove('d-none'); wrap.scrollIntoView({ behavior:'smooth', block:'start' }); wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} user</h5>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" id="us_email" value="${u?.email||''}" ${isEdit?'disabled':''}></div>
+            <div class="col-md-6"><label class="form-label">Tên</label><input class="form-control" id="us_name" value="${u?.name||''}"></div>
+            <div class="col-md-6"><label class="form-label">Role</label><select class="form-select" id="us_role"><option${u?.role==='admin'?' selected':''}>admin</option><option${u?.role==='user'||!isEdit?' selected':''}>user</option></select></div>
+            <div class="col-md-6"><label class="form-label">Active</label><select class="form-select" id="us_active"><option value="true"${u?.active!==false?' selected':''}>true</option><option value="false"${u?.active===false?' selected':''}>false</option></select></div>
+            ${isEdit ? '' : `<div class="col-12"><label class="form-label">Mật khẩu</label><input type="password" class="form-control" id="us_password" placeholder="••••••"></div>`}
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit?`updateUser('${id}')`:'addUser()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('userFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>`; }
+
+    async function addUser(){ const email=document.getElementById('us_email').value.trim(); const name=document.getElementById('us_name').value.trim(); const role=document.getElementById('us_role').value; const active=document.getElementById('us_active').value==='true'; const password=document.getElementById('us_password').value; if(!email) return alert('Email không được trống'); if(!password) return alert('Mật khẩu không được trống'); // sign up via Supabase auth
+      const { data:signUpData, error:signUpError } = await sb.auth.signUp({ email, password }); if(signUpError) return alert(signUpError.message); // insert into user_profiles
+      const payload={ id: signUpData.user.id, email, name, role, active, created_at: new Date().toISOString() }; const { error }=await sb.from('user_profiles').insert([payload]); if(error) return alert(error.message); await loadAll(); renderUsers(); document.getElementById('userFormWrap').classList.add('d-none'); }
+
+    async function updateUser(id){ const payload={ name: document.getElementById('us_name').value.trim(), role: document.getElementById('us_role').value, active: document.getElementById('us_active').value==='true', updated_at: new Date().toISOString(), updated_by: currentUser.email }; const { error }=await sb.from('user_profiles').update(payload).eq('id', id); if(error) return alert(error.message); await loadAll(); renderUsers(); document.getElementById('userFormWrap').classList.add('d-none'); }
+
+    async function deleteUser(id){ if(!confirm('Xóa user?')) return; // remove from auth and user_profiles
+      const userRow = users.find(u => u.id === id); if(!userRow) return; // Delete from user_profiles
+      const { error } = await sb.from('user_profiles').delete().eq('id', id); if(error) return alert(error.message); await loadAll(); renderUsers(); }
+
+    /* 9) AUTHENTICATION */
+    function showAuthOverlay(msg=''){ document.getElementById('authError').textContent = msg || ''; document.getElementById('authOverlay').classList.remove('d-none'); }
+    function hideAuthOverlay(){ document.getElementById('authError').textContent = ''; document.getElementById('authOverlay').classList.add('d-none'); }
+    async function enforceAuth(){ try{ const { data: { user } } = await sb.auth.getUser(); if(!user){ showAuthOverlay(); return; } // Look up user in user_profiles
+        const { data: prof, error } = await sb.from('user_profiles').select('role, active').eq('email', user.email).single(); if(error || !prof || prof.active === false){ showAuthOverlay('Tài khoản không hợp lệ.'); await sb.auth.signOut(); return; } currentUser = { email: user.email, role: prof.role || 'user' }; document.getElementById('currentEmail').textContent = currentUser.email; hideAuthOverlay(); await loadAll(); applyRoleUI(); renderAll(); showSection('dashboard'); } catch(e){ console.error(e); showAuthOverlay('Lỗi xác thực'); } }
+
+    // Sign in with email/password
+    document.getElementById('btnEmailSignIn').onclick = async () => {
+      const email = document.getElementById('login_email').value.trim(); const password = document.getElementById('login_password').value; if(!email || !password){ document.getElementById('authError').textContent = 'Nhập email và mật khẩu'; return; }
+      document.getElementById('authError').textContent = '';
+      const { error } = await sb.auth.signInWithPassword({ email, password }); if(error){ document.getElementById('authError').textContent = error.message; return; }
+      await enforceAuth(); };
+
+    // Sign out
+    document.getElementById('btnSignOut').onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
+
+    // Role based UI
+    function applyRoleUI(){ const isAdmin = currentUser.role === 'admin'; // hide Users tab for non‑admins
+      document.getElementById('navUsers').parentElement.style.display = isAdmin ? '' : 'none'; document.getElementById('page-users').style.display = isAdmin ? '' : 'none'; }
+
+    /* 10) NAVIGATION */
+    function showSection(page){ document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('d-none')); document.getElementById(`page-${page}`).classList.remove('d-none'); document.querySelectorAll('.sidebar .nav-link').forEach(a => { if(a.dataset.page === page) a.classList.add('active'); else a.classList.remove('active'); }); }
+    document.querySelectorAll('#sidebarNav .nav-link[data-page]').forEach(a => { a.addEventListener('click', () => showSection(a.dataset.page)); });
+    document.getElementById('btnAddCustomer').onclick = () => openCustomerForm();
+    document.getElementById('btnAddProject').onclick = () => openProjectForm();
+    document.getElementById('btnAddTask').onclick = () => openTaskForm();
+    document.getElementById('btnAddUser').onclick = () => openUserForm();
+
+    /* 11) INITIALIZE */
+    sb.auth.onAuthStateChange((_event,_session) => { enforceAuth(); });
+    window.addEventListener('load', () => { enforceAuth(); });
   </script>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>
