@@ -1,66 +1,88 @@
 <!doctype html>
 <html lang="vi">
 <head>
+  <!-- =========================================================
+       Project Management System - Enhanced CRM
+       New Features:
+       - Tasks management with project autofill
+       - Weekly reports
+       - User task summary
+       - Project manager summary
+       ========================================================= -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Project Manager • Supabase • Bootstrap</title>
+  <title>Project Management System • Bootstrap Admin</title>
+
   <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
-  <!-- Supabase JS UMD -->
+  <!-- Supabase JS v2 (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
   <style>
-    html, body { height:100%; background:#f8f9fa; }
-    .sidebar { width:280px; position:sticky; top:0; height:100vh; background:#fff; border-right:1px solid #e9ecef; }
-    .sidebar .nav-link { border-radius:.5rem; color:#334155; }
-    .sidebar .nav-link.active, .sidebar .nav-link:hover { background:#e7f1ff; color:#0d6efd; }
-    .content-wrap { margin-left:0; }
-    @media(min-width:992px){ .content-wrap{margin-left:280px;} }
-    .card-shadow{box-shadow:0 8px 24px rgba(0,0,0,.06);border:1px solid #eef2f7;border-radius:1rem;}
-    .suggestions{position:absolute;z-index:1050;background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;max-height:260px;overflow-y:auto;width:100%;box-shadow:0 10px 22px rgba(0,0,0,.08);}
-    .suggestion-item{padding:.5rem .75rem;cursor:pointer;}
-    .suggestion-item:hover{background:#f5f7fb;}
-    .section-anchor{scroll-margin-top:80px;}
-    .auth-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(2px);z-index:3000;}
-    .auth-card{width:420px;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,.2);}
+    html, body { height: 100%; background-color: #f8f9fa; }
+    .sidebar { width: 280px; min-height: 100vh; position: sticky; top: 0; left: 0; border-right: 1px solid #e9ecef; background:#fff; }
+    .sidebar .nav-link { border-radius: .5rem; color: #334155; }
+    .sidebar .nav-link.active, .sidebar .nav-link:hover { background-color: #e7f1ff; color: #0d6efd; }
+    .content-wrap { margin-left: 0; }
+    @media (min-width: 992px) { .content-wrap { margin-left: 280px; } .sidebar { position: fixed; } }
+    .card-shadow { box-shadow: 0 8px 24px rgba(0,0,0,.06); border:1px solid #eef2f7; border-radius:1rem; }
+
+    .suggestions { position:absolute; z-index:1050; background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; max-height:260px; overflow-y:auto; width:100%; box-shadow:0 10px 22px rgba(0,0,0,.08); }
+    .suggestion-item { padding:.5rem .75rem; cursor:pointer; }
+    .suggestion-item:hover { background:#f5f7fb; }
+
+    .section-anchor { scroll-margin-top: 80px; }
+
+    .auth-overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:3000;}
+    .auth-card{width:420px; border-radius:1rem; box-shadow:0 20px 40px rgba(0,0,0,.2);}
+
+    .status-badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; }
+    .status-pending { background-color: #fef3c7; color: #92400e; }
+    .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+    .status-completed { background-color: #d1fae5; color: #065f46; }
+    .priority-high { color: #dc2626; }
+    .priority-medium { color: #ea580c; }
+    .priority-low { color: #16a34a; }
   </style>
 </head>
 <body>
 
-  <!-- AUTH OVERLAY -->
+  <!-- ===== AUTH OVERLAY (Google + whitelist user_profiles) ===== -->
   <div id="authOverlay" class="auth-overlay d-none">
     <div class="card auth-card">
       <div class="card-body text-center p-4">
         <div class="mb-3"><i class="bi bi-shield-lock" style="font-size:2.5rem;"></i></div>
-        <h5 class="fw-bold mb-2">Đăng nhập VSEC PM</h5>
-        <p class="text-muted small mb-4">Chỉ chấp nhận email có trong bảng <code>user_profiles</code> và <code>active = true</code>.</p>
+        <h5 class="fw-bold mb-2">Đăng nhập Project Management</h5>
+        <p class="text-muted small mb-4">Chỉ chấp nhận email nằm trong bảng <code>user_profiles</code> và <code>active = true</code>.</p>
         <button id="btnGoogle" class="btn btn-dark w-100 mb-2"><i class="bi bi-google me-2"></i>Đăng nhập với Google</button>
         <div id="authError" class="text-danger small mt-2"></div>
       </div>
     </div>
   </div>
 
-  <!-- SIDEBAR -->
+  <!-- ========================= SIDEBAR ========================= -->
   <aside class="sidebar p-3">
-    <a class="d-flex align-items-center mb-3 text-decoration-none">
-      <span class="fs-5 fw-bold"><i class="bi bi-kanban me-2"></i>VSEC PM</span>
+    <a class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+      <span class="fs-5 fw-bold"><i class="bi bi-kanban me-2"></i>Project Management</span>
     </a>
     <hr>
     <ul class="nav nav-pills flex-column gap-1" id="sidebarNav">
       <li class="nav-item"><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link" data-page="customers"><i class="bi bi-people me-2"></i>Customers</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="users"><i class="bi bi-person-gear me-2"></i>Users</a></li>
       <li class="nav-item"><a class="nav-link" data-page="projects"><i class="bi bi-kanban me-2"></i>Projects</a></li>
-      <li class="nav-item"><a class="nav-link" data-page="tasks"><i class="bi bi-list-check me-2"></i>Tasks</a></li>
-      <li class="nav-item"><a class="nav-link" data-page="opportunities"><i class="bi bi-bullseye me-2"></i>Opportunities</a></li>
-      <li class="nav-item"><a class="nav-link" data-page="quotes"><i class="bi bi-receipt me-2"></i>Quotes</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="clients"><i class="bi bi-people me-2"></i>Clients</a></li>
       <li class="nav-item"><a class="nav-link" data-page="contracts"><i class="bi bi-file-earmark-text me-2"></i>Contracts</a></li>
-      <li class="nav-item" id="navUsers"><a class="nav-link" data-page="users"><i class="bi bi-person-gear me-2"></i>Users</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="tasks"><i class="bi bi-check2-square me-2"></i>Tasks</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="weekly-report"><i class="bi bi-calendar-week me-2"></i>Weekly Report</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="user-summary"><i class="bi bi-person-check me-2"></i>My Tasks</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="project-summary" id="navProjectSummary"><i class="bi bi-graph-up me-2"></i>Project Summary</a></li>
     </ul>
     <hr>
     <div class="dropdown">
       <a class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
-        <img src="https://ui-avatars.com/api/?name=VSEC&background=0D6EFD&color=fff" width="32" height="32" class="rounded-circle me-2">
+        <img src="https://ui-avatars.com/api/?name=PM&background=0D6EFD&color=fff" alt="" width="32" height="32" class="rounded-circle me-2">
         <strong id="currentEmail">guest@local</strong>
       </a>
       <ul class="dropdown-menu shadow">
@@ -69,392 +91,1425 @@
     </div>
   </aside>
 
-  <!-- MAIN CONTENT -->
+  <!-- ========================= MAIN ========================= -->
   <main class="content-wrap">
     <div class="container-fluid py-4">
 
-      <!-- Dashboard -->
+      <!-- DASHBOARD -->
       <section id="page-dashboard" class="section-anchor">
         <div class="d-flex align-items-center mb-4">
           <h1 class="h3 mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
         </div>
         <div class="row g-4">
-          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Customers</h6><h2 class="fw-bold mb-0" id="kpiCustomers">0</h2></div></div></div>
-          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Projects</h6><h2 class="fw-bold mb-0" id="kpiProjects">0</h2></div></div></div>
-          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Tasks</h6><h2 class="fw-bold mb-0" id="kpiTasks">0</h2></div></div></div>
-          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Opportunities</h6><h2 class="fw-bold mb-0" id="kpiOpportunities">0</h2></div></div></div>
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-1">Users</h6>
+                <h2 class="fw-bold mb-0" id="kpiUsers">0</h2>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-1">Projects</h6>
+                <h2 class="fw-bold mb-0" id="kpiProjects">0</h2>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-1">Clients</h6>
+                <h2 class="fw-bold mb-0" id="kpiClients">0</h2>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-1">Tasks</h6>
+                <h2 class="fw-bold mb-0" id="kpiTasks">0</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-4 mt-2">
+          <div class="col-12 col-md-6">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-3">Task Status Overview</h6>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>Pending</span>
+                  <span class="fw-bold" id="kpiTasksPending">0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>In Progress</span>
+                  <span class="fw-bold" id="kpiTasksInProgress">0</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Completed</span>
+                  <span class="fw-bold" id="kpiTasksCompleted">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h6 class="text-secondary text-uppercase mb-3">Project Status Overview</h6>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>Active</span>
+                  <span class="fw-bold" id="kpiProjectsActive">0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>On Hold</span>
+                  <span class="fw-bold" id="kpiProjectsOnHold">0</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Completed</span>
+                  <span class="fw-bold" id="kpiProjectsCompleted">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- Customers -->
-      <section id="page-customers" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-people me-2"></i>Customers</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddCustomer"><i class="bi bi-plus-lg me-1"></i>Thêm khách hàng</button></div>
-        </div>
-        <div id="customerFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Tax</th><th>Actions</th></tr></thead>
-            <tbody id="customerTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Projects -->
-      <section id="page-projects" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-kanban me-2"></i>Projects</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddProject"><i class="bi bi-plus-lg me-1"></i>Thêm dự án</button></div>
-        </div>
-        <div id="projectFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Customer</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="projectTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Tasks -->
-      <section id="page-tasks" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-list-check me-2"></i>Tasks</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddTask"><i class="bi bi-plus-lg me-1"></i>Thêm nhiệm vụ</button></div>
-        </div>
-        <div id="taskFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr>
-              <th>Title</th><th>Project</th><th>Assignee</th><th>Status</th><th>Priority</th><th>Start</th><th>Due</th><th>Planned</th><th>Actual</th><th>Actions</th>
-            </tr></thead>
-            <tbody id="taskTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Opportunities -->
-      <section id="page-opportunities" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-bullseye me-2"></i>Opportunities</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddOpportunity"><i class="bi bi-plus-lg me-1"></i>Thêm cơ hội</button></div>
-        </div>
-        <div id="oppFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Customer</th><th>Value</th><th>Stage</th><th>Actions</th></tr></thead>
-            <tbody id="oppTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Quotes -->
-      <section id="page-quotes" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-receipt me-2"></i>Quotes</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddQuote"><i class="bi bi-plus-lg me-1"></i>Thêm báo giá</button></div>
-        </div>
-        <div id="quoteFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>ID</th><th>Customer</th><th>Project</th><th>Description</th><th>Amount</th><th>Status</th><th>Sent</th><th>PDF</th><th>Actions</th></tr></thead>
-            <tbody id="quoteTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Contracts -->
-      <section id="page-contracts" class="section-anchor d-none">
-        <div class="d-flex align-items-center mb-4">
-          <h1 class="h3 mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contracts</h1>
-          <div class="ms-auto"><button class="btn btn-primary" id="btnAddContract"><i class="bi bi-plus-lg me-1"></i>Thêm hợp đồng</button></div>
-        </div>
-        <div id="contractFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>ID</th><th>Project</th><th>Customer</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="contractTbody"></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- Users -->
+      <!-- USERS -->
       <section id="page-users" class="section-anchor d-none">
         <div class="d-flex align-items-center mb-4">
           <h1 class="h3 mb-0"><i class="bi bi-person-gear me-2"></i>Users</h1>
           <div class="ms-auto"><button class="btn btn-primary" id="btnAddUser"><i class="bi bi-plus-lg me-1"></i>Thêm user</button></div>
         </div>
         <div id="userFormWrap" class="d-none"></div>
-        <div class="card card-shadow"><div class="card-body table-responsive">
-          <table class="table table-hover table-sm align-middle">
-            <thead class="table-light"><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th>Actions</th></tr></thead>
-            <tbody id="userTbody"></tbody>
-          </table>
-        </div></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Active</th>
+                  <th style="width:140px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="userTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROJECTS -->
+      <section id="page-projects" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-kanban me-2"></i>Projects</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddProject"><i class="bi bi-plus-lg me-1"></i>Thêm dự án</button></div>
+        </div>
+        <div id="projectFormWrap" class="d-none"></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Tên dự án</th>
+                  <th>Khách hàng</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Status</th>
+                  <th style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="projectTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- CLIENTS -->
+      <section id="page-clients" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-people me-2"></i>Clients</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddClient"><i class="bi bi-plus-lg me-1"></i>Thêm khách hàng</button></div>
+        </div>
+        <div id="clientFormWrap" class="d-none"></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Tax</th>
+                  <th style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clientTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTRACTS -->
+      <section id="page-contracts" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contracts</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddContract"><i class="bi bi-plus-lg me-1"></i>Thêm hợp đồng</button></div>
+        </div>
+        <div id="contractFormWrap" class="d-none"></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Dự án</th>
+                  <th>Khách hàng</th>
+                  <th>Giá trị</th>
+                  <th>Status</th>
+                  <th style="width:140px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="contractTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TASKS -->
+      <section id="page-tasks" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-check2-square me-2"></i>Tasks</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddTask"><i class="bi bi-plus-lg me-1"></i>Thêm task</button></div>
+        </div>
+        <div id="taskFormWrap" class="d-none"></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Tên Task</th>
+                  <th>Dự án</th>
+                  <th>Người thực hiện</th>
+                  <th>Tổng thời gian (h)</th>
+                  <th>Đã thực hiện (h)</th>
+                  <th>Tình trạng</th>
+                  <th>Deadline</th>
+                  <th style="width:140px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="taskTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- WEEKLY REPORT -->
+      <section id="page-weekly-report" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-calendar-week me-2"></i>Weekly Report</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddWeeklyReport"><i class="bi bi-plus-lg me-1"></i>Tạo báo cáo tuần</button></div>
+        </div>
+        <div id="weeklyReportFormWrap" class="d-none"></div>
+        <div class="card card-shadow">
+          <div class="card-body table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Tuần</th>
+                  <th>Người báo cáo</th>
+                  <th>Tasks hoàn thành</th>
+                  <th>Tổng thời gian (h)</th>
+                  <th>Đề xuất</th>
+                  <th>Ngày tạo</th>
+                  <th style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="weeklyReportTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- USER SUMMARY -->
+      <section id="page-user-summary" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-person-check me-2"></i>My Tasks Summary</h1>
+        </div>
+        <div class="row g-4 mb-4">
+          <div class="col-12 col-md-4">
+            <div class="card card-shadow">
+              <div class="card-body text-center">
+                <h3 class="fw-bold text-warning" id="myTasksPending">0</h3>
+                <p class="mb-0">Pending Tasks</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="card card-shadow">
+              <div class="card-body text-center">
+                <h3 class="fw-bold text-primary" id="myTasksInProgress">0</h3>
+                <p class="mb-0">In Progress</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="card card-shadow">
+              <div class="card-body text-center">
+                <h3 class="fw-bold text-success" id="myTasksCompleted">0</h3>
+                <p class="mb-0">Completed</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-shadow">
+          <div class="card-body">
+            <h5 class="card-title">My Tasks</h5>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Task</th>
+                    <th>Dự án</th>
+                    <th>Deadline</th>
+                    <th>Tình trạng</th>
+                    <th>Progress</th>
+                  </tr>
+                </thead>
+                <tbody id="myTasksTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROJECT SUMMARY -->
+      <section id="page-project-summary" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-graph-up me-2"></i>Project Summary</h1>
+        </div>
+        <div class="row g-4">
+          <div class="col-12">
+            <div class="card card-shadow">
+              <div class="card-body">
+                <h5 class="card-title">Projects Overview</h5>
+                <div class="table-responsive">
+                  <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Dự án</th>
+                        <th>Khách hàng</th>
+                        <th>Tổng Tasks</th>
+                        <th>Hoàn thành</th>
+                        <th>Đang thực hiện</th>
+                        <th>Pending</th>
+                        <th>Progress</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="projectSummaryTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
     </div>
   </main>
 
-  <!-- SCRIPT -->
+  <!-- ========================= SCRIPTS ========================= -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   <script>
-    // 0) CONFIG
-      const SUPABASE_URL = 'https://jhybbyzpgyfxtfpnuhqt.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoeWJieXpwZ3lmeHRmcG51aHF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMTg2MTgsImV4cCI6MjA2OTU5NDYxOH0.d0jrlFshaX-y_HSuVL_LOo0JsPvD1qqm4ceK1styUaQ';
+    /* 0) SUPABASE CONFIG */
+    const SUPABASE_URL = 'https://mfbdfhvqnxuhxwscdffv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mYmRmaHZxbnh1aHh3c2NkZmZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNDE3MjIsImV4cCI6MjA2OTYxNzcyMn0.rV15XLuKNXR05uEXOunzCkPoPGAVNKrzMP4iffw-vxk';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 1) STATE
-    let currentUser = { email:null, role:'user' };
-    let customers = [], projects = [], tasks = [], opportunities = [], quotes = [], contracts = [], users = [];
+    /* 1) STATE */
+    let currentUser = { email: null, role: 'user' };
+    let users = [], projects = [], clients = [], contracts = [], tasks = [], weeklyReports = [];
 
-    // Helpers
-    function money(n){ return (n||0).toLocaleString('vi-VN') + ' đ'; }
-    function pad(n,w){ return (n+'').padStart(w,'0'); }
-    function getWeekNumber(d=new Date()){
-      const date = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-      const dayNum = date.getUTCDay()||7;
-      date.setUTCDate(date.getUTCDate()+4-dayNum);
-      const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-      return Math.ceil((((date-yearStart)/86400000)+1)/7);
+    /* Helpers */
+    const pad = (n,w)=> (n+'').padStart(w,'0');
+    function getWeekNumber(date=new Date()){ 
+      const d=new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); 
+      const dayNum=d.getUTCDay()||7; 
+      d.setUTCDate(d.getUTCDate()+4-dayNum); 
+      const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1)); 
+      return Math.ceil((((d-yearStart)/86400000)+1)/7); 
+    }
+    function money(n){ return (n||0).toLocaleString('vi-VN'); }
+
+    function generateClientId(){ 
+      const used=clients.map(c=>parseInt((c.id||'').slice(1),10)).filter(Number.isFinite); 
+      for(let i=1;i<10000;i++) if(!used.includes(i)) return 'C'+pad(i,4); 
+      throw new Error('Hết mã khách hàng'); 
+    }
+    
+    function generateProjectId(){ 
+      const y=new Date().getFullYear().toString().slice(-2); 
+      const used=projects.filter(p=>(p.project_id||'').startsWith('P_'+y)).map(p=>parseInt(p.project_id.slice(4),10)).filter(Number.isFinite); 
+      for(let i=1;i<1000;i++) if(!used.includes(i)) return 'P_'+y+pad(i,3); 
+      throw new Error('Hết mã dự án'); 
+    }
+    
+    function generateContractId(){ 
+      const now=new Date(); 
+      const y=now.getFullYear().toString().slice(-2); 
+      const w=pad(getWeekNumber(now),2); 
+      const used=contracts.filter(c=>(c.contract_id||'').startsWith(`HD_${y}${w}`)).map(c=>parseInt(c.contract_id.slice(7),10)).filter(Number.isFinite); 
+      for(let i=1;i<=99;i++) if(!used.includes(i)) return `HD_${y}${w}${pad(i,2)}`; 
+      throw new Error('Hết mã hợp đồng'); 
     }
 
-    // 2) LOAD DATA
-    async function loadAll(){
-      const rs = await Promise.all([
-        sb.from('customers').select('*').order('id'),
-        sb.from('projects').select('*').order('project_id'),
-        sb.from('tasks').select('*').order('created_at'),
-        sb.from('opportunities').select('*').order('opportunity_id'),
-        sb.from('quotes').select('*').order('quotes_id'),
-        sb.from('contracts').select('*').order('contract_id'),
-        sb.from('user_profiles').select('*')
-      ]);
-      customers     = rs[0].data || [];
-      projects      = rs[1].data || [];
-      tasks         = rs[2].data || [];
-      opportunities = rs[3].data || [];
-      quotes        = rs[4].data || [];
-      contracts     = rs[5].data || [];
-      users         = rs[6].data || [];
+    function generateTaskId(){ 
+      const used=tasks.map(t=>parseInt((t.task_id||'').slice(1),10)).filter(Number.isFinite); 
+      for(let i=1;i<100000;i++) if(!used.includes(i)) return 'T'+pad(i,5); 
+      throw new Error('Hết mã task'); 
     }
 
-    // 3) RENDER
-    function setKPIs(){
-      document.getElementById('kpiCustomers').textContent = customers.length;
-      document.getElementById('kpiProjects').textContent  = projects.length;
-      document.getElementById('kpiTasks').textContent     = tasks.length;
-      document.getElementById('kpiOpportunities').textContent = opportunities.length;
+    function showSection(page){ 
+      document.querySelectorAll('[id^="page-"]').forEach(el=>el.classList.add('d-none')); 
+      document.getElementById(`page-${page}`).classList.remove('d-none'); 
+      document.querySelectorAll('.sidebar .nav-link').forEach(a=>{ 
+        if(a.dataset.page===page) a.classList.add('active'); 
+        else a.classList.remove('active'); 
+      }); 
     }
 
-    function renderCustomers(){
-      const tbody = document.getElementById('customerTbody');
-      const elevated = currentUser.role==='admin';
-      let list = elevated ? customers : customers.filter(c=>c.created_by===currentUser.email);
-      tbody.innerHTML = list.map(c=>`
+    function setKPIs(){ 
+      document.getElementById('kpiUsers').textContent = users.length;
+      document.getElementById('kpiProjects').textContent = projects.length;
+      document.getElementById('kpiClients').textContent = clients.length;
+      document.getElementById('kpiTasks').textContent = tasks.length;
+      
+      // Task status counts
+      const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+      const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
+      const completedTasks = tasks.filter(t => t.status === 'completed').length;
+      
+      document.getElementById('kpiTasksPending').textContent = pendingTasks;
+      document.getElementById('kpiTasksInProgress').textContent = inProgressTasks;
+      document.getElementById('kpiTasksCompleted').textContent = completedTasks;
+      
+      // Project status counts
+      const activeProjects = projects.filter(p => p.status === 'active').length;
+      const onHoldProjects = projects.filter(p => p.status === 'on_hold').length;
+      const completedProjects = projects.filter(p => p.status === 'completed').length;
+      
+      document.getElementById('kpiProjectsActive').textContent = activeProjects;
+      document.getElementById('kpiProjectsOnHold').textContent = onHoldProjects;
+      document.getElementById('kpiProjectsCompleted').textContent = completedProjects;
+    }
+
+    function updateUserTaskSummary() {
+      const myTasks = tasks.filter(t => t.assigned_user === currentUser.email);
+      const pending = myTasks.filter(t => t.status === 'pending').length;
+      const inProgress = myTasks.filter(t => t.status === 'in_progress').length;
+      const completed = myTasks.filter(t => t.status === 'completed').length;
+      
+      document.getElementById('myTasksPending').textContent = pending;
+      document.getElementById('myTasksInProgress').textContent = inProgress;
+      document.getElementById('myTasksCompleted').textContent = completed;
+      
+      renderMyTasks();
+    }
+
+    function renderMyTasks() {
+      const tbody = document.getElementById('myTasksTbody');
+      const myTasks = tasks.filter(t => t.assigned_user === currentUser.email);
+      
+      tbody.innerHTML = myTasks.map(task => {
+        const project = projects.find(p => p.project_id === task.project_id);
+        const progress = task.total_hours > 0 ? Math.round((task.completed_hours / task.total_hours) * 100) : 0;
+        const statusClass = task.status === 'pending' ? 'status-pending' : 
+                           task.status === 'in_progress' ? 'status-in-progress' : 'status-completed';
+        
+        return `
+          <tr>
+            <td>${task.task_name}</td>
+            <td>${project ? project.project_name : 'N/A'}</td>
+            <td>${task.deadline || 'N/A'}</td>
+            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+            <td>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">${progress}%</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderProjectSummary() {
+      const tbody = document.getElementById('projectSummaryTbody');
+      
+      tbody.innerHTML = projects.map(project => {
+        const client = clients.find(c => c.id === project.customer_id);
+        const projectTasks = tasks.filter(t => t.project_id === project.project_id);
+        const totalTasks = projectTasks.length;
+        const completedTasks = projectTasks.filter(t => t.status === 'completed').length;
+        const inProgressTasks = projectTasks.filter(t => t.status === 'in_progress').length;
+        const pendingTasks = projectTasks.filter(t => t.status === 'pending').length;
+        const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        
+        return `
+          <tr>
+            <td>${project.project_name}</td>
+            <td>${client ? client.name : 'N/A'}</td>
+            <td>${totalTasks}</td>
+            <td>${completedTasks}</td>
+            <td>${inProgressTasks}</td>
+            <td>${pendingTasks}</td>
+            <td>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">${progress}%</div>
+              </div>
+            </td>
+            <td><span class="status-badge ${project.status === 'active' ? 'status-in-progress' : project.status === 'completed' ? 'status-completed' : 'status-pending'}">${project.status}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* 2) AUTH */
+    async function checkAuth() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        document.getElementById('authOverlay').classList.remove('d-none');
+        return false;
+      }
+      
+      const email = session.user.email;
+      const { data: profile } = await sb.from('user_profiles').select('*').eq('email', email).eq('active', true).single();
+      
+      if (!profile) {
+        document.getElementById('authError').textContent = 'Email không được phép truy cập.';
+        await sb.auth.signOut();
+        return false;
+      }
+      
+      currentUser = { email, role: profile.role };
+      document.getElementById('currentEmail').textContent = email;
+      document.getElementById('authOverlay').classList.add('d-none');
+      
+      // Hide project summary for non-admin/non-manager users
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        document.getElementById('navProjectSummary').style.display = 'none';
+      }
+      
+      return true;
+    }
+
+    async function signInWithGoogle() {
+      try {
+        const { error } = await sb.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin }
+        });
+        if (error) throw error;
+      } catch (error) {
+        document.getElementById('authError').textContent = error.message;
+      }
+    }
+
+    async function signOut() {
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    /* 3) DATA LOADING */
+    async function loadData() {
+      try {
+        const [usersRes, projectsRes, clientsRes, contractsRes, tasksRes, reportsRes] = await Promise.all([
+          sb.from('user_profiles').select('*'),
+          sb.from('projects').select('*'),
+          sb.from('customers').select('*'),
+          sb.from('contracts').select('*'),
+          sb.from('tasks').select('*'),
+          sb.from('weekly_reports').select('*')
+        ]);
+
+        users = usersRes.data || [];
+        projects = projectsRes.data || [];
+        clients = clientsRes.data || [];
+        contracts = contractsRes.data || [];
+        tasks = tasksRes.data || [];
+        weeklyReports = reportsRes.data || [];
+
+        setKPIs();
+        updateUserTaskSummary();
+        renderProjectSummary();
+        renderAllTables();
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    }
+
+    function renderAllTables() {
+      renderUsers();
+      renderProjects();
+      renderClients();
+      renderContracts();
+      renderTasks();
+      renderWeeklyReports();
+    }
+
+    /* 4) RENDER FUNCTIONS */
+    function renderUsers() {
+      const tbody = document.getElementById('userTbody');
+      tbody.innerHTML = users.map(user => `
         <tr>
-          <td>${c.id}</td>
-          <td>${c.name}</td>
-          <td>${c.contact_person||''}</td>
-          <td>${c.phone||''}</td>
-          <td>${c.email||''}</td>
-          <td>${c.tax_code||''}</td>
+          <td>${user.email}</td>
+          <td>${user.role}</td>
+          <td>${user.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
           <td>
-            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openCustomerForm('${c.id}')"><i class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${c.id}')"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-primary" onclick="editUser('${user.email}')">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user.email}')">Delete</button>
           </td>
         </tr>
       `).join('');
     }
 
-    function renderProjects(){
+    function renderProjects() {
       const tbody = document.getElementById('projectTbody');
-      tbody.innerHTML = projects.map(p=>{
-        const c = customers.find(x=>x.id===p.customer_id);
-        return `<tr>
-          <td>${p.project_id}</td>
-          <td>${p.project_name}</td>
-          <td>${c?c.name:p.customer_id}</td>
-          <td>${p.start_date||''}</td>
-          <td>${p.end_date||''}</td>
-          <td>${p.status||''}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openProjectForm('${p.project_id}')"><i class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${p.project_id}')"><i class="bi bi-trash"></i></button>
-          </td>
-        </tr>`;
+      tbody.innerHTML = projects.map(project => {
+        const client = clients.find(c => c.id === project.customer_id);
+        return `
+          <tr>
+            <td>${project.project_id}</td>
+            <td>${project.project_name}</td>
+            <td>${client ? client.name : 'N/A'}</td>
+            <td>${project.start_date || 'N/A'}</td>
+            <td>${project.end_date || 'N/A'}</td>
+            <td><span class="status-badge ${project.status === 'active' ? 'status-in-progress' : project.status === 'completed' ? 'status-completed' : 'status-pending'}">${project.status}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" onclick="editProject('${project.project_id}')">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${project.project_id}')">Delete</button>
+            </td>
+          </tr>
+        `;
       }).join('');
     }
 
-    function renderTasks(){
+    function renderClients() {
+      const tbody = document.getElementById('clientTbody');
+      tbody.innerHTML = clients.map(client => `
+        <tr>
+          <td>${client.id}</td>
+          <td>${client.name}</td>
+          <td>${client.contact_person || 'N/A'}</td>
+          <td>${client.phone || 'N/A'}</td>
+          <td>${client.email || 'N/A'}</td>
+          <td>${client.tax_code || 'N/A'}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="editClient('${client.id}')">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteClient('${client.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderContracts() {
+      const tbody = document.getElementById('contractTbody');
+      tbody.innerHTML = contracts.map(contract => {
+        const project = projects.find(p => p.project_id === contract.project_id);
+        const client = clients.find(c => c.id === contract.customer_id);
+        return `
+          <tr>
+            <td>${contract.contract_id}</td>
+            <td>${project ? project.project_name : 'N/A'}</td>
+            <td>${client ? client.name : 'N/A'}</td>
+            <td>${money(contract.value)}</td>
+            <td><span class="status-badge ${contract.status === 'active' ? 'status-in-progress' : contract.status === 'completed' ? 'status-completed' : 'status-pending'}">${contract.status}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" onclick="editContract('${contract.contract_id}')">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteContract('${contract.contract_id}')">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderTasks() {
       const tbody = document.getElementById('taskTbody');
-      tbody.innerHTML = tasks.map(t=>{
-        const p = projects.find(x=>x.project_id===t.project_id);
-        const u = users.find(x=>x.email===t.assigned_to);
-        return `<tr>
-          <td>${t.title}</td>
-          <td>${p? p.project_name : t.project_id}</td>
-          <td>${u? u.name : ''}</td>
-          <td>${t.status}</td>
-          <td>${t.priority||''}</td>
-          <td>${t.start_date||''}</td>
-          <td>${t.due_date||''}</td>
-          <td>${t.planned_hours||0}</td>
-          <td>${t.actual_hours||0}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openTaskForm('${t.task_id}')"><i class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${t.task_id}')"><i class="bi bi-trash"></i></button>
-          </td>
-        </tr>`;
+      tbody.innerHTML = tasks.map(task => {
+        const project = projects.find(p => p.project_id === task.project_id);
+        const statusClass = task.status === 'pending' ? 'status-pending' : 
+                           task.status === 'in_progress' ? 'status-in-progress' : 'status-completed';
+        return `
+          <tr>
+            <td>${task.task_id}</td>
+            <td>${task.task_name}</td>
+            <td>${project ? project.project_name : 'N/A'}</td>
+            <td>${task.assigned_user}</td>
+            <td>${task.total_hours || 0}</td>
+            <td>${task.completed_hours || 0}</td>
+            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+            <td>${task.deadline || 'N/A'}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" onclick="editTask('${task.task_id}')">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${task.task_id}')">Delete</button>
+            </td>
+          </tr>
+        `;
       }).join('');
     }
 
-    // (Tương tự renderOpp, renderQuotes, renderContracts, renderUsers…)
-
-    function renderAll(){
-      setKPIs();
-      renderCustomers();
-      renderProjects();
-      renderTasks();
-      renderOpportunities();
-      renderQuotes();
-      renderContracts();
-      renderUsers();
+    function renderWeeklyReports() {
+      const tbody = document.getElementById('weeklyReportTbody');
+      tbody.innerHTML = weeklyReports.map(report => `
+        <tr>
+          <td>${report.week_year}</td>
+          <td>${report.user_email}</td>
+          <td>${report.completed_tasks || 0}</td>
+          <td>${report.total_hours || 0}</td>
+          <td>${report.suggestions || 'N/A'}</td>
+          <td>${new Date(report.created_at).toLocaleDateString('vi-VN')}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="viewWeeklyReport('${report.id}')">View</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteWeeklyReport('${report.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
     }
 
-    // 4) CRUD FUNCTIONS (Customers, Projects, Tasks, …)
-    // --- Customers ---
-    function openCustomerForm(id=''){
-      const wrap = document.getElementById('customerFormWrap');
-      const isEdit = !!id;
-      const c = isEdit ? customers.find(x=>x.id===id) : {};
-      wrap.classList.remove('d-none');
-      wrap.innerHTML = `
-        <div class="card card-shadow mb-4"><div class="card-body">
-          <h5 class="card-title">${isEdit?'Sửa':'Thêm'} khách hàng</h5>
-          <div class="row g-3">
-            <div class="col-md-2"><label class="form-label">ID</label><input id="cust_id" class="form-control" disabled value="${isEdit?c.id:generateCustomerId()}"></div>
-            <div class="col-md-10"><label class="form-label">Name</label><input id="cust_name" class="form-control" value="${c.name||''}"></div>
-            <!-- Các field khác… -->
+    /* 5) FORM FUNCTIONS */
+    function showUserForm(user = null) {
+      const isEdit = !!user;
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} User</h5>
+            <form id="userForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" name="email" value="${user?.email || ''}" ${isEdit ? 'readonly' : ''} required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Role</label>
+                  <select class="form-select" name="role" required>
+                    <option value="user" ${user?.role === 'user' ? 'selected' : ''}>User</option>
+                    <option value="manager" ${user?.role === 'manager' ? 'selected' : ''}>Manager</option>
+                    <option value="admin" ${user?.role === 'admin' ? 'selected' : ''}>Admin</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="active" ${user?.active ? 'checked' : ''}>
+                    <label class="form-check-label">Active</label>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">${isEdit ? 'Cập nhật' : 'Thêm'}</button>
+                <button type="button" class="btn btn-secondary" onclick="hideUserForm()">Hủy</button>
+              </div>
+            </form>
           </div>
-          <div class="mt-3">
-            <button class="btn btn-primary" onclick="${isEdit?`updateCustomer('${id}')`:'addCustomer()'}">Lưu</button>
-            <button class="btn btn-outline-secondary" onclick="document.getElementById('customerFormWrap').classList.add('d-none')">Hủy</button>
-          </div>
-        </div></div>`;
-    }
-    async function addCustomer(){ /* … */ }
-    async function updateCustomer(id){ /* … */ }
-    async function deleteCustomer(id){ /* … */ }
-
-    // --- Projects ---
-    function openProjectForm(id=''){ /* … */ }
-    async function addProject(){ /* … */ }
-    async function updateProject(id){ /* … */ }
-    async function deleteProject(id){ /* … */ }
-
-    // --- Tasks ---
-    function openTaskForm(id=''){
-      const wrap = document.getElementById('taskFormWrap');
-      const isEdit = !!id;
-      const t = isEdit ? tasks.find(x=>x.task_id===id) : {};
-      wrap.classList.remove('d-none');
-      const projOptions = projects.map(p=>`<option value="${p.project_id}" ${p.project_id===t.project_id?'selected':''}>${p.project_name}</option>`).join('');
-      const userOptions = users.map(u=>`<option value="${u.email}" ${u.email===t.assigned_to?'selected':''}>${u.name||u.email}</option>`).join('');
-      wrap.innerHTML = `
-        <div class="card card-shadow mb-4"><div class="card-body">
-          <h5 class="card-title">${isEdit?'Sửa':'Thêm'} nhiệm vụ</h5>
-          <div class="row g-3">
-            <div class="col-md-4"><label class="form-label">Tiêu đề</label><input class="form-control" id="task_title" value="${t.title||''}"></div>
-            <div class="col-md-4"><label class="form-label">Dự án</label><select id="task_project" class="form-select">${projOptions}</select></div>
-            <div class="col-md-4"><label class="form-label">Người thực hiện</label><select id="task_assign" class="form-select"><option value="">--none--</option>${userOptions}</select></div>
-            <div class="col-md-4"><label class="form-label">Trạng thái</label><select id="task_status" class="form-select">
-              <option value="todo" ${t.status==='todo'?'selected':''}>Chưa làm</option>
-              <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
-              <option value="waiting_review" ${t.status==='waiting_review'?'selected':''}>Chờ duyệt</option>
-              <option value="done" ${t.status==='done'?'selected':''}>Hoàn thành</option>
-              <option value="blocked" ${t.status==='blocked'?'selected':''}>Chặn</option>
-            </select></div>
-            <div class="col-md-2"><label class="form-label">Ưu tiên</label><input type="number" min="0" max="9" id="task_priority" class="form-control" value="${t.priority||0}"></div>
-            <div class="col-md-3"><label class="form-label">Start</label><input type="date" id="task_start" class="form-control" value="${t.start_date||''}"></div>
-            <div class="col-md-3"><label class="form-label">Due</label><input type="date" id="task_due" class="form-control" value="${t.due_date||''}"></div>
-            <div class="col-md-3"><label class="form-label">Planned hrs</label><input type="number" step="0.5" min="0" id="task_planned" class="form-control" value="${t.planned_hours||0}"></div>
-            <div class="col-md-3"><label class="form-label">Actual hrs</label><input type="number" step="0.5" min="0" id="task_actual" class="form-control" value="${t.actual_hours||0}"></div>
-            <div class="col-12"><label class="form-label">Mô tả</label><textarea id="task_desc" class="form-control" rows="2">${t.description||''}</textarea></div>
-          </div>
-          <div class="mt-3">
-            <button class="btn btn-primary" onclick="${isEdit?`updateTask('${id}')`:'addTask()'}">Lưu</button>
-            <button class="btn btn-outline-secondary" onclick="document.getElementById('taskFormWrap').classList.add('d-none')">Hủy</button>
-          </div>
-        </div></div>`;
-    }
-    async function addTask(){ /* … */ }
-    async function updateTask(id){ /* … */ }
-    async function deleteTask(id){ /* … */ }
-
-    // … (CRUD cho Opportunities, Quotes, Contracts, Users tương tự) …
-
-    // 5) ROLE-BASED UI & AUTH
-    function applyRoleUI(){
-      const isAdmin = currentUser.role==='admin';
-      document.getElementById('navUsers').style.display = isAdmin?'':'none';
-      document.getElementById('page-users').style.display = isAdmin?'':'none';
+        </div>
+      `;
+      
+      document.getElementById('userFormWrap').innerHTML = formHtml;
+      document.getElementById('userFormWrap').classList.remove('d-none');
+      
+      document.getElementById('userForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const userData = {
+          email: formData.get('email'),
+          role: formData.get('role'),
+          active: formData.has('active')
+        };
+        
+        try {
+          if (isEdit) {
+            await sb.from('user_profiles').update(userData).eq('email', user.email);
+          } else {
+            await sb.from('user_profiles').insert(userData);
+          }
+          hideUserForm();
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
     }
 
-    async function enforceAuth(){
-      const { data: { user } } = await sb.auth.getUser();
-      if(!user){ showAuthOverlay(); return; }
-      const { data: prof, error } = await sb
-        .from('user_profiles')
-        .select('role, active')
-        .eq('email', user.email)
-        .single();
-      if(error || !prof || !prof.active){
-        await sb.auth.signOut();
-        showAuthOverlay('Email không có quyền, liên hệ Admin');
-        return;
+    function hideUserForm() {
+      document.getElementById('userFormWrap').classList.add('d-none');
+    }
+
+    function showTaskForm(task = null) {
+      const isEdit = !!task;
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Task</h5>
+            <form id="taskForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Tên Task</label>
+                  <input type="text" class="form-control" name="task_name" value="${task?.task_name || ''}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Dự án</label>
+                  <div class="position-relative">
+                    <input type="text" class="form-control" name="project_search" id="projectSearch" 
+                           value="${task ? projects.find(p => p.project_id === task.project_id)?.project_name || '' : ''}" 
+                           placeholder="Tìm kiếm dự án..." autocomplete="off">
+                    <input type="hidden" name="project_id" id="selectedProjectId" value="${task?.project_id || ''}">
+                    <div id="projectSuggestions" class="suggestions d-none"></div>
+                  </div>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Mô tả</label>
+                  <textarea class="form-control" name="description" rows="3">${task?.description || ''}</textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Người thực hiện</label>
+                  <select class="form-select" name="assigned_user" required>
+                    <option value="">Chọn người thực hiện</option>
+                    ${users.filter(u => u.active).map(u => 
+                      `<option value="${u.email}" ${task?.assigned_user === u.email ? 'selected' : ''}>${u.email}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tổng thời gian (giờ)</label>
+                  <input type="number" class="form-control" name="total_hours" value="${task?.total_hours || ''}" min="0" step="0.5">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Thời gian đã thực hiện (giờ)</label>
+                  <input type="number" class="form-control" name="completed_hours" value="${task?.completed_hours || 0}" min="0" step="0.5">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tình trạng</label>
+                  <select class="form-select" name="status" required>
+                    <option value="pending" ${task?.status === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="in_progress" ${task?.status === 'in_progress' ? 'selected' : ''}>Đang thực hiện</option>
+                    <option value="completed" ${task?.status === 'completed' ? 'selected' : ''}>Đã hoàn thành</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Deadline</label>
+                  <input type="date" class="form-control" name="deadline" value="${task?.deadline || ''}">
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">${isEdit ? 'Cập nhật' : 'Thêm'}</button>
+                <button type="button" class="btn btn-secondary" onclick="hideTaskForm()">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('taskFormWrap').innerHTML = formHtml;
+      document.getElementById('taskFormWrap').classList.remove('d-none');
+      
+      // Setup project autofill
+      setupProjectAutofill();
+      
+      document.getElementById('taskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const taskData = {
+          task_name: formData.get('task_name'),
+          project_id: formData.get('project_id'),
+          description: formData.get('description'),
+          assigned_user: formData.get('assigned_user'),
+          total_hours: parseFloat(formData.get('total_hours')) || 0,
+          completed_hours: parseFloat(formData.get('completed_hours')) || 0,
+          status: formData.get('status'),
+          deadline: formData.get('deadline') || null
+        };
+        
+        if (!taskData.project_id) {
+          alert('Vui lòng chọn dự án');
+          return;
+        }
+        
+        try {
+          if (isEdit) {
+            await sb.from('tasks').update(taskData).eq('task_id', task.task_id);
+          } else {
+            taskData.task_id = generateTaskId();
+            await sb.from('tasks').insert(taskData);
+          }
+          hideTaskForm();
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
+    }
+
+    function setupProjectAutofill() {
+      const searchInput = document.getElementById('projectSearch');
+      const suggestionsDiv = document.getElementById('projectSuggestions');
+      const hiddenInput = document.getElementById('selectedProjectId');
+      
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        if (query.length < 1) {
+          suggestionsDiv.classList.add('d-none');
+          return;
+        }
+        
+        const matches = projects.filter(p => 
+          p.project_name.toLowerCase().includes(query) || 
+          p.project_id.toLowerCase().includes(query)
+        );
+        
+        if (matches.length > 0) {
+          suggestionsDiv.innerHTML = matches.map(p => 
+            `<div class="suggestion-item" data-id="${p.project_id}" data-name="${p.project_name}">
+              ${p.project_name} (${p.project_id})
+            </div>`
+          ).join('');
+          suggestionsDiv.classList.remove('d-none');
+        } else {
+          suggestionsDiv.classList.add('d-none');
+        }
+      });
+      
+      suggestionsDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('suggestion-item')) {
+          const projectId = e.target.dataset.id;
+          const projectName = e.target.dataset.name;
+          searchInput.value = projectName;
+          hiddenInput.value = projectId;
+          suggestionsDiv.classList.add('d-none');
+        }
+      });
+      
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+          suggestionsDiv.classList.add('d-none');
+        }
+      });
+    }
+
+    function hideTaskForm() {
+      document.getElementById('taskFormWrap').classList.add('d-none');
+    }
+
+    function showWeeklyReportForm() {
+      const currentWeek = getWeekNumber();
+      const currentYear = new Date().getFullYear();
+      const weekYear = `${currentYear}-W${pad(currentWeek, 2)}`;
+      
+      // Get user's tasks for current week
+      const userTasks = tasks.filter(t => t.assigned_user === currentUser.email);
+      
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Tạo báo cáo tuần ${weekYear}</h5>
+            <form id="weeklyReportForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Tuần</label>
+                  <input type="text" class="form-control" name="week_year" value="${weekYear}" readonly>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Người báo cáo</label>
+                  <input type="text" class="form-control" name="user_email" value="${currentUser.email}" readonly>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Tasks đã hoàn thành trong tuần</label>
+                  <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                    ${userTasks.map(task => {
+                      const project = projects.find(p => p.project_id === task.project_id);
+                      return `
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="completed_task_ids" value="${task.task_id}" id="task_${task.task_id}">
+                          <label class="form-check-label" for="task_${task.task_id}">
+                            ${task.task_name} - ${project ? project.project_name : 'N/A'}
+                          </label>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tổng thời gian thực hiện (giờ)</label>
+                  <input type="number" class="form-control" name="total_hours" min="0" step="0.5" required>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Đề xuất kiến nghị</label>
+                  <textarea class="form-control" name="suggestions" rows="4" placeholder="Nhập đề xuất, kiến nghị cho tuần tiếp theo..."></textarea>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Tạo báo cáo</button>
+                <button type="button" class="btn btn-secondary" onclick="hideWeeklyReportForm()">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('weeklyReportFormWrap').innerHTML = formHtml;
+      document.getElementById('weeklyReportFormWrap').classList.remove('d-none');
+      
+      document.getElementById('weeklyReportForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const completedTaskIds = formData.getAll('completed_task_ids');
+        
+        const reportData = {
+          week_year: formData.get('week_year'),
+          user_email: formData.get('user_email'),
+          completed_tasks: completedTaskIds.length,
+          completed_task_ids: completedTaskIds,
+          total_hours: parseFloat(formData.get('total_hours')),
+          suggestions: formData.get('suggestions'),
+          created_at: new Date().toISOString()
+        };
+        
+        try {
+          await sb.from('weekly_reports').insert(reportData);
+          hideWeeklyReportForm();
+          loadData();
+          alert('Báo cáo đã được tạo thành công!');
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
+    }
+
+    function hideWeeklyReportForm() {
+      document.getElementById('weeklyReportFormWrap').classList.add('d-none');
+    }
+
+    /* 6) CRUD FUNCTIONS */
+    async function editUser(email) {
+      const user = users.find(u => u.email === email);
+      if (user) showUserForm(user);
+    }
+
+    async function deleteUser(email) {
+      if (confirm('Bạn có chắc muốn xóa user này?')) {
+        try {
+          await sb.from('user_profiles').delete().eq('email', email);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
       }
-      currentUser = { email:user.email, role:prof.role };
-      document.getElementById('currentEmail').textContent = user.email;
-      hideAuthOverlay();
-      await loadAll();
-      applyRoleUI();
-      renderAll();
-      showSection('dashboard');
     }
 
-    sb.auth.onAuthStateChange((_e, session) => enforceAuth());
+    async function editTask(taskId) {
+      const task = tasks.find(t => t.task_id === taskId);
+      if (task) showTaskForm(task);
+    }
 
-    document.getElementById('btnGoogle').onclick = () => {
-      sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.origin } });
-    };
-    document.getElementById('btnSignOut').onclick = async (e) => {
-      e.preventDefault(); await sb.auth.signOut(); location.reload();
-    };
+    async function deleteTask(taskId) {
+      if (confirm('Bạn có chắc muốn xóa task này?')) {
+        try {
+          await sb.from('tasks').delete().eq('task_id', taskId);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      }
+    }
 
-    // Navigation
-    document.querySelectorAll('#sidebarNav .nav-link').forEach(a=>{
-      a.addEventListener('click',()=> showSection(a.dataset.page));
+    async function deleteWeeklyReport(reportId) {
+      if (confirm('Bạn có chắc muốn xóa báo cáo này?')) {
+        try {
+          await sb.from('weekly_reports').delete().eq('id', reportId);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      }
+    }
+
+    function viewWeeklyReport(reportId) {
+      const report = weeklyReports.find(r => r.id === reportId);
+      if (report) {
+        const completedTaskNames = report.completed_task_ids?.map(taskId => {
+          const task = tasks.find(t => t.task_id === taskId);
+          return task ? task.task_name : taskId;
+        }).join(', ') || 'Không có';
+        
+        alert(`Báo cáo tuần ${report.week_year}
+Người báo cáo: ${report.user_email}
+Tasks hoàn thành: ${completedTaskNames}
+Tổng thời gian: ${report.total_hours} giờ
+Đề xuất: ${report.suggestions || 'Không có'}`);
+      }
+    }
+
+    /* CRUD Functions for Projects */
+    function showProjectForm(project = null) {
+      const isEdit = !!project;
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Dự án</h5>
+            <form id="projectForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Tên dự án</label>
+                  <input type="text" class="form-control" name="project_name" value="${project?.project_name || ''}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Khách hàng</label>
+                  <select class="form-select" name="customer_id" required>
+                    <option value="">Chọn khách hàng</option>
+                    ${clients.map(c => 
+                      `<option value="${c.id}" ${project?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Mô tả</label>
+                  <textarea class="form-control" name="description" rows="3">${project?.description || ''}</textarea>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Ngày bắt đầu</label>
+                  <input type="date" class="form-control" name="start_date" value="${project?.start_date || ''}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Ngày kết thúc</label>
+                  <input type="date" class="form-control" name="end_date" value="${project?.end_date || ''}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Trạng thái</label>
+                  <select class="form-select" name="status" required>
+                    <option value="active" ${project?.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="on_hold" ${project?.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="completed" ${project?.status === 'completed' ? 'selected' : ''}>Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">${isEdit ? 'Cập nhật' : 'Thêm'}</button>
+                <button type="button" class="btn btn-secondary" onclick="hideProjectForm()">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('projectFormWrap').innerHTML = formHtml;
+      document.getElementById('projectFormWrap').classList.remove('d-none');
+      
+      document.getElementById('projectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const projectData = {
+          project_name: formData.get('project_name'),
+          customer_id: formData.get('customer_id'),
+          description: formData.get('description'),
+          start_date: formData.get('start_date') || null,
+          end_date: formData.get('end_date') || null,
+          status: formData.get('status')
+        };
+        
+        try {
+          if (isEdit) {
+            await sb.from('projects').update(projectData).eq('project_id', project.project_id);
+          } else {
+            projectData.project_id = generateProjectId();
+            await sb.from('projects').insert(projectData);
+          }
+          hideProjectForm();
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
+    }
+
+    function hideProjectForm() {
+      document.getElementById('projectFormWrap').classList.add('d-none');
+    }
+
+    function editProject(projectId) {
+      const project = projects.find(p => p.project_id === projectId);
+      if (project) showProjectForm(project);
+    }
+
+    async function deleteProject(projectId) {
+      if (confirm('Bạn có chắc muốn xóa dự án này?')) {
+        try {
+          await sb.from('projects').delete().eq('project_id', projectId);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      }
+    }
+
+    /* CRUD Functions for Clients */
+    function showClientForm(client = null) {
+      const isEdit = !!client;
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Khách hàng</h5>
+            <form id="clientForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Tên khách hàng</label>
+                  <input type="text" class="form-control" name="name" value="${client?.name || ''}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Người liên hệ</label>
+                  <input type="text" class="form-control" name="contact_person" value="${client?.contact_person || ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Số điện thoại</label>
+                  <input type="tel" class="form-control" name="phone" value="${client?.phone || ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" name="email" value="${client?.email || ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Mã số thuế</label>
+                  <input type="text" class="form-control" name="tax_code" value="${client?.tax_code || ''}">
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Địa chỉ</label>
+                  <textarea class="form-control" name="address" rows="2">${client?.address || ''}</textarea>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">${isEdit ? 'Cập nhật' : 'Thêm'}</button>
+                <button type="button" class="btn btn-secondary" onclick="hideClientForm()">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('clientFormWrap').innerHTML = formHtml;
+      document.getElementById('clientFormWrap').classList.remove('d-none');
+      
+      document.getElementById('clientForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const clientData = {
+          name: formData.get('name'),
+          contact_person: formData.get('contact_person'),
+          phone: formData.get('phone'),
+          email: formData.get('email'),
+          tax_code: formData.get('tax_code'),
+          address: formData.get('address')
+        };
+        
+        try {
+          if (isEdit) {
+            await sb.from('customers').update(clientData).eq('id', client.id);
+          } else {
+            clientData.id = generateClientId();
+            await sb.from('customers').insert(clientData);
+          }
+          hideClientForm();
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
+    }
+
+    function hideClientForm() {
+      document.getElementById('clientFormWrap').classList.add('d-none');
+    }
+
+    function editClient(clientId) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) showClientForm(client);
+    }
+
+    async function deleteClient(clientId) {
+      if (confirm('Bạn có chắc muốn xóa khách hàng này?')) {
+        try {
+          await sb.from('customers').delete().eq('id', clientId);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      }
+    }
+
+    /* CRUD Functions for Contracts */
+    function showContractForm(contract = null) {
+      const isEdit = !!contract;
+      const formHtml = `
+        <div class="card card-shadow mb-4">
+          <div class="card-body">
+            <h5 class="card-title">${isEdit ? 'Sửa' : 'Thêm'} Hợp đồng</h5>
+            <form id="contractForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Dự án</label>
+                  <select class="form-select" name="project_id" required>
+                    <option value="">Chọn dự án</option>
+                    ${projects.map(p => 
+                      `<option value="${p.project_id}" ${contract?.project_id === p.project_id ? 'selected' : ''}>${p.project_name}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Khách hàng</label>
+                  <select class="form-select" name="customer_id" required>
+                    <option value="">Chọn khách hàng</option>
+                    ${clients.map(c => 
+                      `<option value="${c.id}" ${contract?.customer_id === c.id ? 'selected' : ''}>${c.name}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Giá trị hợp đồng</label>
+                  <input type="number" class="form-control" name="value" value="${contract?.value || ''}" min="0" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Trạng thái</label>
+                  <select class="form-select" name="status" required>
+                    <option value="draft" ${contract?.status === 'draft' ? 'selected' : ''}>Draft</option>
+                    <option value="active" ${contract?.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="completed" ${contract?.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    <option value="cancelled" ${contract?.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Ngày ký</label>
+                  <input type="date" class="form-control" name="signed_date" value="${contract?.signed_date || ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Ngày hết hạn</label>
+                  <input type="date" class="form-control" name="expiry_date" value="${contract?.expiry_date || ''}">
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Ghi chú</label>
+                  <textarea class="form-control" name="notes" rows="3">${contract?.notes || ''}</textarea>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">${isEdit ? 'Cập nhật' : 'Thêm'}</button>
+                <button type="button" class="btn btn-secondary" onclick="hideContractForm()">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('contractFormWrap').innerHTML = formHtml;
+      document.getElementById('contractFormWrap').classList.remove('d-none');
+      
+      document.getElementById('contractForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const contractData = {
+          project_id: formData.get('project_id'),
+          customer_id: formData.get('customer_id'),
+          value: parseFloat(formData.get('value')),
+          status: formData.get('status'),
+          signed_date: formData.get('signed_date') || null,
+          expiry_date: formData.get('expiry_date') || null,
+          notes: formData.get('notes')
+        };
+        
+        try {
+          if (isEdit) {
+            await sb.from('contracts').update(contractData).eq('contract_id', contract.contract_id);
+          } else {
+            contractData.contract_id = generateContractId();
+            await sb.from('contracts').insert(contractData);
+          }
+          hideContractForm();
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      });
+    }
+
+    function hideContractForm() {
+      document.getElementById('contractFormWrap').classList.add('d-none');
+    }
+
+    function editContract(contractId) {
+      const contract = contracts.find(c => c.contract_id === contractId);
+      if (contract) showContractForm(contract);
+    }
+
+    async function deleteContract(contractId) {
+      if (confirm('Bạn có chắc muốn xóa hợp đồng này?')) {
+        try {
+          await sb.from('contracts').delete().eq('contract_id', contractId);
+          loadData();
+        } catch (error) {
+          alert('Lỗi: ' + error.message);
+        }
+      }
+    }
+
+    /* 7) EVENT LISTENERS */
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Auth check
+      if (await checkAuth()) {
+        await loadData();
+      }
+
+      // Navigation
+      document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const page = e.target.closest('a').dataset.page;
+          showSection(page);
+          
+          // Update user summary when viewing that page
+          if (page === 'user-summary') {
+            updateUserTaskSummary();
+          }
+          
+          // Update project summary when viewing that page
+          if (page === 'project-summary') {
+            renderProjectSummary();
+          }
+        });
+      });
+
+      // Auth buttons
+      document.getElementById('btnGoogle').addEventListener('click', signInWithGoogle);
+      document.getElementById('btnSignOut').addEventListener('click', signOut);
+
+      // Add buttons
+      document.getElementById('btnAddUser').addEventListener('click', () => showUserForm());
+      document.getElementById('btnAddTask').addEventListener('click', () => showTaskForm());
+      document.getElementById('btnAddWeeklyReport').addEventListener('click', showWeeklyReportForm);
+      document.getElementById('btnAddProject').addEventListener('click', () => showProjectForm());
+      document.getElementById('btnAddClient').addEventListener('click', () => showClientForm());
+      document.getElementById('btnAddContract').addEventListener('click', () => showContractForm());
+
+      // Auth state change listener
+      sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+          checkAuth().then(success => {
+            if (success) loadData();
+          });
+        } else if (event === 'SIGNED_OUT') {
+          location.reload();
+        }
+      });
     });
-    document.getElementById('btnAddCustomer').onclick     = ()=>openCustomerForm();
-    document.getElementById('btnAddProject').onclick      = ()=>openProjectForm();
-    document.getElementById('btnAddTask').onclick         = ()=>openTaskForm();
-    document.getElementById('btnAddOpportunity').onclick  = ()=>openOppForm();
-    document.getElementById('btnAddQuote').onclick        = ()=>openQuoteForm();
-    document.getElementById('btnAddContract').onclick     = ()=>openContractForm();
-    document.getElementById('btnAddUser').onclick         = ()=>openUserForm();
-
-    function showSection(page){
-      document.querySelectorAll('section[id^="page-"]').forEach(s=>s.classList.add('d-none'));
-      document.getElementById(`page-${page}`).classList.remove('d-none');
-      document.querySelectorAll('#sidebarNav .nav-link').forEach(a=>a.classList.toggle('active', a.dataset.page===page));
-    }
-
-    // Init
-    enforceAuth();
   </script>
-
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 
